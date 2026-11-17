@@ -1,0 +1,187 @@
+//! The panel's SVG art set. `generate` builds every file of `assets/ui`; the
+//! render functions draw them with resvg, the renderer egui_extras uses, so
+//! what the check shows is what the app will show.
+
+pub mod font;
+pub mod layout;
+pub mod parts;
+pub mod svg;
+pub mod text;
+
+use resvg::{tiny_skia, usvg};
+
+use font::{Anchor, text};
+use svg::{Part, Svg, defs_for, n};
+
+/// The scales the art is checked at.
+pub const SCALES: [u32; 3] = [1, 2, 3];
+
+/// All files of `assets/ui` except the README: (file name, content).
+pub fn generate() -> Vec<(String, String)> {
+    let parts = parts::all_parts();
+    let l = layout::layout(&parts);
+    let mut files: Vec<(String, String)> = parts
+        .iter()
+        .map(|p| (format!("{}.svg", p.name), p.to_svg()))
+        .collect();
+    files.push(("panel.svg".into(), layout::compose(&parts, &l)));
+    files.push(("layout.tsv".into(), layout::tsv(&l)));
+    files
+}
+
+/// Renders an SVG document at `scale` times its native size.
+pub fn render(svg: &str, scale: u32) -> Result<tiny_skia::Pixmap, String> {
+    let tree = usvg::Tree::from_str(svg, &usvg::Options::default()).map_err(|e| e.to_string())?;
+    let size = tree.size();
+    let w = (size.width() * scale as f32).ceil() as u32;
+    let h = (size.height() * scale as f32).ceil() as u32;
+    let mut pixmap = tiny_skia::Pixmap::new(w, h).ok_or("empty size")?;
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale as f32, scale as f32),
+        &mut pixmap.as_mut(),
+    );
+    Ok(pixmap)
+}
+
+/// Renders a square SVG document scaled to `size` x `size` pixels.
+pub fn render_size(svg: &str, size: u32) -> Result<tiny_skia::Pixmap, String> {
+    let tree = usvg::Tree::from_str(svg, &usvg::Options::default()).map_err(|e| e.to_string())?;
+    let mut pixmap = tiny_skia::Pixmap::new(size, size).ok_or("empty size")?;
+    let scale = size as f32 / tree.size().width();
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+    Ok(pixmap)
+}
+
+/// The files of a macOS `.iconset` (task-110): name and pixel size, 16 to 1024.
+pub fn iconset_files() -> Vec<(String, u32)> {
+    let mut v = Vec::new();
+    for base in [16, 32, 128, 256, 512] {
+        v.push((format!("icon_{base}x{base}.png"), base));
+        v.push((format!("icon_{base}x{base}@2x.png"), base * 2));
+    }
+    v
+}
+
+/// The pixel sizes of the Windows `.ico` (task-111): the sizes Explorer, the taskbar and the
+/// Start menu pick from at 100% to 400% scale.
+pub const ICO_SIZES: [u32; 8] = [16, 24, 32, 48, 64, 96, 128, 256];
+
+/// The app icon as a Windows `.ico` file: one PNG-compressed image per size of [`ICO_SIZES`]
+/// (the form Windows Vista and newer read; the entry of 256 pixels is stored as width 0).
+pub fn ico(svg: &str) -> Result<Vec<u8>, String> {
+    let mut images = Vec::new();
+    for size in ICO_SIZES {
+        let png = render_size(svg, size)?
+            .encode_png()
+            .map_err(|e| e.to_string())?;
+        images.push((size, png));
+    }
+    let mut out = Vec::new();
+    out.extend_from_slice(&[0, 0, 1, 0]); // reserved, type 1 = icon
+    out.extend_from_slice(&(images.len() as u16).to_le_bytes());
+    let mut offset = 6 + 16 * images.len() as u32;
+    for (size, png) in &images {
+        let dim = if *size >= 256 { 0 } else { *size as u8 };
+        out.extend_from_slice(&[dim, dim, 0, 0]); // width, height, no palette, reserved
+        out.extend_from_slice(&1u16.to_le_bytes()); // planes
+        out.extend_from_slice(&32u16.to_le_bytes()); // bits per pixel
+        out.extend_from_slice(&(png.len() as u32).to_le_bytes());
+        out.extend_from_slice(&offset.to_le_bytes());
+        offset += png.len() as u32;
+    }
+    for (_, png) in images {
+        out.extend_from_slice(&png);
+    }
+    Ok(out)
+}
+
+/// The number of pixels that are not fully transparent.
+fn visible(pixmap: &tiny_skia::Pixmap) -> usize {
+    pixmap.pixels().iter().filter(|p| p.alpha() > 0).count()
+}
+
+/// Renders every part at 1x, 2x and 3x and returns the problems found: a
+/// parse error, a wrong pixel size, or an empty image.
+pub fn check_parts(parts: &[Part]) -> Vec<String> {
+    let mut problems = Vec::new();
+    for p in parts {
+        for scale in SCALES {
+            match render(&p.to_svg(), scale) {
+                Err(e) => problems.push(format!("{} at {scale}x: {e}", p.name)),
+                Ok(px) => {
+                    let (cw, ch) = p.canvas();
+                    let s = scale as f32;
+                    let (w, h) = ((cw * s).ceil() as u32, (ch * s).ceil() as u32);
+                    if (px.width(), px.height()) != (w, h) {
+                        problems.push(format!(
+                            "{} at {scale}x: {}x{} pixels, want {w}x{h}",
+                            p.name,
+                            px.width(),
+                            px.height()
+                        ));
+                    }
+                    if visible(&px) == 0 {
+                        problems.push(format!("{} at {scale}x: nothing drawn", p.name));
+                    }
+                }
+            }
+        }
+    }
+    problems
+}
+
+/// A sheet showing every part with its name, as one SVG document: the control's rectangle
+/// in gray, the bleed around it outlined in magenta.
+pub fn contact_sheet(parts: &[Part]) -> String {
+    const W: f32 = 700.0;
+    let mut order: Vec<&Part> = parts.iter().collect();
+    order.sort_by(|a, b| b.h.total_cmp(&a.h).then(a.name.cmp(&b.name)));
+    let mut s = Svg::new();
+    let (mut x, mut y, mut row_h) = (4.0_f32, 4.0_f32, 0.0_f32);
+    for p in order {
+        let (cw, ch) = p.canvas();
+        let cell_w = cw.max(font::text_width(3.0, &p.name)) + 6.0;
+        let cell_h = ch + 10.0;
+        if x + cell_w > W && x > 4.0 {
+            x = 4.0;
+            y += row_h + 4.0;
+            row_h = 0.0;
+        }
+        s.g_at(x + p.bleed, y + p.bleed);
+        s.rect_stroke(-p.bleed, -p.bleed, cw, ch, 0.0, "#ff00ff60", 0.3);
+        s.rect(0.0, 0.0, p.w, p.h, 0.0, "#79808a");
+        s.raw(&p.body);
+        text(
+            &mut s,
+            -p.bleed,
+            ch - p.bleed + 6.0,
+            3.0,
+            Anchor::Start,
+            "#ffffff",
+            &p.name,
+        );
+        s.end_g();
+        x += cell_w;
+        row_h = row_h.max(cell_h);
+    }
+    let h = y + row_h + 4.0;
+    format!(
+        concat!(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" ",
+            "viewBox=\"0 0 {} {}\">{}<rect width=\"{}\" height=\"{}\" fill=\"#2b2f36\"/>{}</svg>\n",
+        ),
+        n(W),
+        n(h),
+        n(W),
+        n(h),
+        defs_for(&s.s),
+        n(W),
+        n(h),
+        s.s
+    )
+}

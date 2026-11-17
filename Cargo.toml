@@ -1,0 +1,22 @@
+[workspace]
+resolver = "3"
+members = ["crates/rbs", "crates/orb-engine", "crates/orb-cli", "crates/rbm", "crates/orb-player", "crates/orb-ui-art", "crates/orb-ui", "crates/orb-testkit"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+publish = false
+
+# The SHA-256 of the 128 MB RB20FUL.DAT (rbm::dat) takes seconds unoptimized: the tests of
+# `orb mod recrypt` hash a stand-in file several times.
+[profile.dev.package.sha2]
+opt-level = 3
+
+# The profile of the packages (scripts/build.sh, docs/building.md): link-time optimization costs
+# a long build, so `cargo build --release` stays as it is for everyday work. Panics stay unwinding.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = true

@@ -1,0 +1,54 @@
+# assets
+
+- `ui/`: the panel's SVG art set (`crates/orb-ui-art`).
+- `app_icon.ico`: the Windows icon (the `app_icon` part at 16 to 256 px), made by
+  `cargo run --release -p orb-ui-art --bin ui-art -- ico` and embedded in `OpenRB-338.exe` by
+  `crates/orb-ui/build.rs` (task-111).
+- `Standard.rbm`: the standard mod, orb's built-in kit (task-067, docs/rbm.md section 13).
+- `readme/`: the README's pictures (CI ignores this folder, `.github/workflows/ci.yml`):
+  - `logo.webp`: the README's logo, the About window's icon and wordmark on its gray plate with
+    the startup animation (task-114), played once (loop count 1). An animated WebP, lossy q50
+    (task-181; the panel's speckle and the plate's drop shadow made the GIF 2.04 MB, the WebP is
+    0.48 MB). Since task-179 made from the app itself: 56 `--about --screenshot` captures at
+    `ORB_LOGO_T` = 0, 1/30, ... s (the last one the final state), cropped to the icon and the
+    plate: 740 x 215 px (2x), 30 fps. Row 215 of the 216-row capture holds the tops of the
+    subtitle's letters in every frame, so the last row is cropped (task-180). The generator
+    script is not in the repository; after the 56 captures are joined into a full-quality
+    740 x 216 GIF (not a lossy one), run `gifsicle --crop 0,0+740x215 IN.gif -o crop.gif` and
+    `gif2webp -lossy -q 50 -m 6 crop.gif -o logo.webp` (libwebp's gif2webp).
+  - `screenshot.png`: the README's screenshot of OpenRB-338 on macOS (2026-11-13, task-179's
+    redesign; `OpenRB-338 --demo --size 1100x700 --ppp 2 --screenshot`), then
+    `pngquant --quality=80-95 --strip --speed 1` and `oxipng -o max --strip all` (task-180: 4.6
+    MB to 1.1 MB).
+  - The art's previews (`assets/ui/preview/`) and `docs/ui_app/` stay lossless: after a
+    regeneration run `oxipng -o max --strip all` on them (pixels identical).
+
+## Standard.rbm
+
+A recrypted ReBirth mod named "Standard ReBirth": the 46 built-in drum samples of ReBirth 2.01
+(ReBirth.dll's AIFF resources 1000..1045, byte for byte) and its standard panel (Rebirth.exe's 58
+panel JPEG resources and its splash, resource 903). It is Propellerhead's material, committed by
+the user's decision of 2026-10-27 as the one exception to the rule that nothing of the original
+is in the repository. `crates/rbm/src/standard.rs` embeds it (`include_bytes!`): `orb render`,
+`orb compare`, `orb play` and OpenRB-338 take the built-in kit from it and need no file of the
+original.
+
+Made with:
+
+```
+orb mod pack-standard --rebirth-dll PATH/ReBirth.dll --rebirth-exe CD/Rebirth.exe \
+    -o assets/Standard.rbm
+```
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `ReBirth.dll` (ReBirth 2.01, installed; also on the CD) | 2,472,960 | `4c3a6441a2cd50f797d99b1c5b6cf0aaf198c7ad8ca2648196b530c2e3e58b12` |
+| `Rebirth.exe` of the ReBirth CD (from the CAB at file offset 0x30266C of `Install ReBirth RB-338.exe`, extracted with bsdtar; not committed) | 1,606,656 | `e69fef4153856f4ad985797a3f312a0027633c00f835c3348415b031bbd87004` |
+| `assets/Standard.rbm` | 2,572,792 | `6355b5f14fc2ebfe7ed9e6e42208f97817f96c5e30ed42fdca4205d3cdab5fbe` |
+
+The CD's exe gives the splash without the Steinberg logo that the installed `Rebirth.exe` (patched,
+`6a651e8164b8444a5f0639cb6a2fef2aa43c5500bd9c5288627c2030b047f876`, 1,594,880 bytes) carries; the 58 panel bitmaps are the same in both. The build is deterministic: with
+`ORB_CD_ISO` naming the CD image, `cargo test --release -p orb-cli --test standard_mod` takes the
+DLL and the exe from it (`orb-testkit`, task-121), rebuilds the file and checks it byte for byte.
+`orb mod pack-standard --iso CD.iso -o FILE` (task-065, docs/rbm.md 16) reads both files straight
+from the CD image and gives the same bytes.

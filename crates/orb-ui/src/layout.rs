@@ -1,0 +1,266 @@
+//! Where the controls and the section backgrounds sit, in panel pixels
+<<<<<<< HEAD
+//! (`assets/ui/layout.tsv` and the README's background table).
+=======
+//! (`assets/ui/layout.tsv`, `assets/modern_ui/layout.tsv` and the README's background table).
+
+use crate::settings::UiVariant;
+>>>>>>> feature/automation-patterns
+
+pub const PANEL_W: f32 = 624.0;
+pub const PANEL_H: f32 = 510.0;
+
+const LAYOUT_TSV: &str = include_str!("../../../assets/ui/layout.tsv");
+<<<<<<< HEAD
+=======
+const MODERN_LAYOUT_TSV: &str = include_str!("../../../assets/modern_ui/layout.tsv");
+>>>>>>> feature/automation-patterns
+
+/// A control's rectangle and the part that draws its default state.
+#[derive(Clone, Debug)]
+pub struct Ctl {
+    pub id: String,
+    pub section: String,
+    pub kind: String,
+    pub part: String,
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl Ctl {
+    /// The part's name without its state: `btn_play_lit` -> `btn_play_`. Not for knobs,
+    /// faders and displays, whose parts are composed.
+    pub fn family(&self) -> &str {
+        match self.part.rfind('_') {
+            Some(i) => &self.part[..=i],
+            None => &self.part,
+        }
+    }
+
+    /// The control's name within its section (`tb303_1.cutoff` -> `cutoff`).
+    pub fn name(&self) -> &str {
+        self.id.split_once('.').map_or(&self.id, |(_, n)| n)
+    }
+}
+
+/// Parses `layout.tsv`.
+pub fn controls() -> Vec<Ctl> {
+<<<<<<< HEAD
+    LAYOUT_TSV
+        .lines()
+=======
+    parse_controls(LAYOUT_TSV)
+}
+
+/// Controls for the selected skin. The modern map predates the 303 rest LEDs, so retain those
+/// two controls from the classic map at their shared positions.
+pub fn controls_for(variant: UiVariant) -> Vec<Ctl> {
+    if variant == UiVariant::Classic {
+        return controls();
+    }
+    let classic = controls();
+    let mut controls = parse_controls(MODERN_LAYOUT_TSV);
+    for id in ["tb303_1.rest_led", "tb303_2.rest_led"] {
+        if let Some(control) = classic.iter().find(|c| c.id == id) {
+            controls.push(control.clone());
+        }
+    }
+    controls
+}
+
+fn parse_controls(tsv: &str) -> Vec<Ctl> {
+    tsv.lines()
+>>>>>>> feature/automation-patterns
+        .skip(1)
+        .map(|line| {
+            let f: Vec<&str> = line.split('\t').collect();
+            let n = |i: usize| f[i].parse::<f32>().expect("layout.tsv number");
+            Ctl {
+                id: f[0].into(),
+                section: f[1].into(),
+                kind: f[2].into(),
+                part: f[3].into(),
+                x: n(4),
+                y: n(5),
+                w: n(6),
+                h: n(7),
+            }
+        })
+        .collect()
+}
+
+/// The section backgrounds drawn first: (part, x, y). The row focus bars are not here. The
+/// pattern sections and the mixer channels have one background each: the speckle of the
+/// gray plates is laid in panel coordinates, so no two plates look alike (task-179).
+pub fn backgrounds() -> Vec<(&'static str, f32, f32)> {
+    const PATTERN: [&str; 4] = [
+        "bg_pattern_1",
+        "bg_pattern_2",
+        "bg_pattern_3",
+        "bg_pattern_4",
+    ];
+    const MIXER: [&str; 4] = ["bg_mixer_1", "bg_mixer_2", "bg_mixer_3", "bg_mixer_4"];
+    let mut v = vec![
+        ("wood_left", 0.0, 0.0),
+        ("wood_right", 608.0, 0.0),
+        ("bg_transport", 16.0, 0.0),
+        ("logo", 474.0, 1.0),
+    ];
+    for r in 0..4 {
+        let y = 50.0 + 115.0 * r as f32;
+        v.push((PATTERN[r], 16.0, y));
+        v.push((
+            match r {
+                0 | 1 => "bg_tb303",
+                2 => "bg_tr808",
+                _ => "bg_tr909",
+            },
+            90.0,
+            y,
+        ));
+        v.push((MIXER[r], 456.0, y));
+    }
+    v.push(("bg_master", 526.0, 50.0));
+    v.push(("bg_pcf", 526.0, 148.0));
+    v.push(("bg_delay", 526.0, 259.0));
+    v.push(("bg_dist", 526.0, 352.0));
+    v.push(("bg_comp", 526.0, 417.0));
+    v
+}
+
+/// The static art drawn over the controls: (part, x, y, w, h). The 808's upper labels lie
+/// over the tone knobs' cast shadows, the PCF's fader captions over the handles (task-179).
+pub fn foregrounds() -> [(&'static str, f32, f32, f32, f32); 2] {
+    [
+        ("fg_tr808", 90.0 + 78.0, 280.0 + 44.0, 107.0, 10.0),
+        ("fg_pcf", 526.0 + 4.0, 148.0 + 103.0, 76.0, 7.0),
+    ]
+}
+
+<<<<<<< HEAD
+=======
+/// Modern backgrounds already include the TR-808 and PCF captions.
+pub fn foregrounds_for(variant: UiVariant) -> Vec<(&'static str, f32, f32, f32, f32)> {
+    match variant {
+        UiVariant::Classic => foregrounds().to_vec(),
+        UiVariant::Modern => Vec::new(),
+    }
+}
+
+>>>>>>> feature/automation-patterns
+/// The focus bar of row `r` (0..=3): (x, y, w, h).
+pub fn focus_bar(r: usize) -> (f32, f32, f32, f32) {
+    (86.0, 50.0 + 115.0 * r as f32, 4.0, 115.0)
+}
+
+/// The row (0..=3) containing a panel point, as the window's click handler tests it.
+pub fn row_at(x: f32, y: f32) -> Option<usize> {
+    if !(16.0..526.0).contains(&x) || !(50.0..510.0).contains(&y) {
+        return None;
+    }
+    Some(((y - 50.0) / 115.0) as usize)
+}
+
+/// Whether a panel point is on the logo, the hit rectangle of `sub_42A799`
+/// (`sub_479B06(458, 1, 608, 49)` in transport coordinates, clipped to the transport: panel x
+/// 474..607, y 1..48; docs/ui_spec.md section 3).
+pub fn on_logo(x: f32, y: f32) -> bool {
+    (474.0..608.0).contains(&x) && (1.0..49.0).contains(&y)
+}
+
+/// The origins of the drum machine sections (panel pixels), for pointer math.
+pub const TR808_ORIGIN: (f32, f32) = (90.0, 280.0);
+pub const TR909_ORIGIN: (f32, f32) = (90.0, 395.0);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn layout_has_every_control() {
+        let c = controls();
+        // 348 before task-179, which added each 303's rest LED
+        assert_eq!(c.len(), 350);
+        assert!(c.iter().all(|c| c.w > 0.0 && c.h > 0.0));
+        let play = c.iter().find(|c| c.id == "transport.play").unwrap();
+        assert_eq!((play.x, play.y, play.w, play.h), (112.0, 21.0, 32.0, 25.0));
+        assert_eq!(play.family(), "btn_play_");
+        assert_eq!(play.name(), "play");
+    }
+
+    #[test]
+<<<<<<< HEAD
+=======
+    fn modern_controls_use_modern_geometry_and_keep_new_303_leds() {
+        let controls = controls_for(UiVariant::Modern);
+        let find = |id: &str| controls.iter().find(|c| c.id == id).unwrap();
+        assert_eq!(controls.len(), 350);
+        assert_eq!(
+            (find("transport.loop").x, find("transport.loop").y),
+            (433.0, 26.0)
+        );
+        assert_eq!(
+            (
+                find("pattern1.shuffle").x,
+                find("pattern1.shuffle").y,
+                find("pattern1.shuffle").w,
+                find("pattern1.shuffle").h
+            ),
+            (19.0, 147.0, 30.0, 12.0)
+        );
+        assert!(controls.iter().any(|c| c.id == "tb303_1.rest_led"));
+        assert!(controls.iter().any(|c| c.id == "tb303_2.rest_led"));
+        assert!(foregrounds_for(UiVariant::Modern).is_empty());
+    }
+
+    #[test]
+>>>>>>> feature/automation-patterns
+    fn backgrounds_match_the_art_generator() {
+        let parts = orb_ui_art::parts::all_parts();
+        let l = orb_ui_art::layout::layout(&parts);
+        let mut want: Vec<(String, f32, f32)> = l
+            .backgrounds
+            .into_iter()
+            .filter(|(n, _, _)| !n.starts_with("focus_"))
+            .collect();
+        let mut got: Vec<(String, f32, f32)> = backgrounds()
+            .into_iter()
+            .map(|(n, x, y)| (n.to_string(), x, y))
+            .collect();
+        want.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        got.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert_eq!(got, want);
+        // the foregrounds: the generator's places and the parts' sizes
+        let fg: Vec<(String, f32, f32)> = foregrounds()
+            .iter()
+            .map(|f| (f.0.to_string(), f.1, f.2))
+            .collect();
+        assert_eq!(fg, l.foregrounds);
+        for (name, _, _, w, h) in foregrounds() {
+            let p = parts.iter().find(|p| p.name == name).unwrap();
+            assert_eq!((p.w, p.h), (w, h), "{name}");
+        }
+    }
+
+    #[test]
+    fn rows() {
+        assert_eq!(row_at(100.0, 60.0), Some(0));
+        assert_eq!(row_at(100.0, 509.0), Some(3));
+        assert_eq!(row_at(10.0, 60.0), None);
+        assert_eq!(row_at(100.0, 20.0), None);
+    }
+
+    #[test]
+    fn the_logo() {
+        assert!(on_logo(474.0, 1.0) && on_logo(607.9, 48.9));
+        assert!(!on_logo(473.9, 10.0) && !on_logo(608.0, 10.0));
+        assert!(!on_logo(500.0, 0.9) && !on_logo(500.0, 49.0));
+        // the logo part covers exactly the click area
+        use orb_ui_art::parts::{LOGO_H, LOGO_W, LOGO_X, LOGO_Y};
+        assert_eq!((LOGO_X, LOGO_Y), (474.0, 1.0));
+        assert!(on_logo(LOGO_X, LOGO_Y) && on_logo(LOGO_X + LOGO_W - 0.1, LOGO_Y + LOGO_H - 0.1));
+        assert!(!on_logo(LOGO_X + LOGO_W, LOGO_Y) && !on_logo(LOGO_X, LOGO_Y + LOGO_H));
+    }
+}
