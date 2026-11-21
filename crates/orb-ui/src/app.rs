@@ -13,12 +13,8 @@ use std::time::Duration;
 use orb_engine::samples::SampleSet;
 
 use eframe::egui::{
-<<<<<<< HEAD
-    self, Color32, Image, Key, Pos2, Rect, Response, Sense, Ui, Vec2, emath::GuiRounding,
-=======
     self, Color32, Image, Key, PointerButton, Pos2, Rect, Response, Sense, Ui, Vec2,
     emath::GuiRounding,
->>>>>>> feature/automation-patterns
 };
 
 use crate::art;
@@ -154,11 +150,8 @@ pub struct App {
     pub(crate) error_text: Option<Rect>,
     /// What was done, shown at the bottom of the window ("Saved ...").
     pub status: Option<String>,
-<<<<<<< HEAD
-=======
     /// The clipboard holding copied pattern or song track events.
     pub(crate) clipboard: Option<crate::clipboard::Clipboard>,
->>>>>>> feature/automation-patterns
     /// The Options menu's keyboard mode (Ctrl/Cmd+F / +G).
     pub key_mode: KeyMode,
     /// Whether the window draws the menu bar (the window of OpenRB-338 does; the headless tests
@@ -199,15 +192,16 @@ pub struct App {
     /// The same for the Help > Keyboard Shortcuts window (`App::key_help_ui`).
     pub(crate) key_help_open: bool,
     pub(crate) key_help_serial: u32,
-<<<<<<< HEAD
-=======
     /// The open automation curve editor window, if any.
     pub(crate) auto_editor: Option<crate::automation_editor::AutomationEditor>,
     /// The open overview of every active song-automation lane.
     pub(crate) all_auto_editor: Option<crate::automation_editor::AllAutomationEditor>,
-    /// The open pattern automation editor window, if any.
-    pub(crate) pattern_automation: Option<crate::pattern_automation::PatternAutomationEditor>,
->>>>>>> feature/automation-patterns
+    /// One independent pattern automation editor per device, if open.
+    pub(crate) pattern_automation: [Option<crate::pattern_automation::PatternAutomationEditor>; 4],
+    /// Serial per device, so reopening an editor gets a fresh egui window id.
+    pub(crate) pattern_automation_serial: [u32; 4],
+    /// The open read-only overview of the four pattern sections, if any.
+    pub(crate) patterns_overview: Option<crate::pattern_automation::PatternsOverview>,
     /// What the info window drew last (`App::info_shown`).
     pub(crate) info_shown: Option<crate::info::SongInfo>,
     pub(crate) events_seen: usize,
@@ -215,11 +209,7 @@ pub struct App {
     /// The window title last sent (`App::update_title`).
     pub title: String,
     holds: Vec<Hold>,
-<<<<<<< HEAD
-    ctls: Vec<Ctl>,
-=======
     pub(crate) ctls: Vec<Ctl>,
->>>>>>> feature/automation-patterns
     shot: Option<Shot>,
     /// `ORB_UI_FRAME_STATS=1`: the frame rate and cost, printed (`FrameStats`).
     pub frame_stats: Option<FrameStats>,
@@ -233,13 +223,6 @@ pub struct App {
 
 impl App {
     pub fn new(panel: Panel, shot: Option<Shot>) -> Self {
-<<<<<<< HEAD
-        Self {
-            panel,
-            link: None,
-            samples: None,
-            settings: Settings::default(),
-=======
         let settings = if cfg!(test) {
             Settings::default()
         } else {
@@ -251,7 +234,6 @@ impl App {
             link: None,
             samples: None,
             settings,
->>>>>>> feature/automation-patterns
             browser: None,
             doc: Document::new(),
             settled: false,
@@ -265,10 +247,7 @@ impl App {
             error_copy: None,
             error_text: None,
             status: None,
-<<<<<<< HEAD
-=======
             clipboard: None,
->>>>>>> feature/automation-patterns
             key_mode: KeyMode::default(),
             menu: false,
             prompt: None,
@@ -291,30 +270,22 @@ impl App {
             mod_info_shown: None,
             key_help_open: false,
             key_help_serial: 0,
-<<<<<<< HEAD
-=======
             auto_editor: None,
             all_auto_editor: None,
-            pattern_automation: None,
->>>>>>> feature/automation-patterns
+            pattern_automation: std::array::from_fn(|_| None),
+            pattern_automation_serial: [0; 4],
+            patterns_overview: None,
             info_shown: None,
             events_seen: 0,
             allow_close: false,
             title: String::new(),
             holds: Vec::new(),
-<<<<<<< HEAD
-            ctls: layout::controls(),
-=======
             ctls,
->>>>>>> feature/automation-patterns
             shot,
             frame_stats: FrameStats::from_env(),
             last_px_scale: None,
             resize_until: f64::NEG_INFINITY,
             shown: 0,
-<<<<<<< HEAD
-        }
-=======
         };
         // Select the UI variant's art set, the grain tone and the desk texture before any part
         // is requested.
@@ -322,7 +293,6 @@ impl App {
         art::set_grain(this.settings.grain_color.transform(this.settings.grain_hue));
         art::set_desk_texture(this.settings.desk_texture);
         this
->>>>>>> feature/automation-patterns
     }
 
     /// Opens the file browser for `mode` over the panel (the menu calls this). Ctrl/Cmd+O opens it
@@ -527,11 +497,7 @@ fn missing_part(name: &str) {
 /// resize a part is drawn from the texture of its last size, scaled, until the size settles.
 #[derive(Clone, Default)]
 pub struct PartTextures {
-<<<<<<< HEAD
-    map: std::collections::HashMap<(usize, u32, u32), PartTexture>,
-=======
     map: std::collections::HashMap<(usize, u32, u32, u16), PartTexture>,
->>>>>>> feature/automation-patterns
     /// The size each part (by URI) was last rasterized at: the texture a resize draws.
     latest: std::collections::HashMap<usize, (u32, u32)>,
     /// The pass of the last sweep.
@@ -549,11 +515,8 @@ struct PendingTexture {
     preview: Option<[u32; 2]>,
     handle: egui::TextureHandle,
     options: egui::TextureOptions,
-<<<<<<< HEAD
-=======
     /// The grain transform to apply after rasterizing; `None` keeps the original.
     grain: art::GrainTransform,
->>>>>>> feature/automation-patterns
 }
 
 /// When a frame misses more than `PREVIEW_MIN_PARTS` parts and a part is denser than 1.25
@@ -587,27 +550,15 @@ fn no_preview_id() -> egui::Id {
     egui::Id::unique("orb-ui no preview")
 }
 
-<<<<<<< HEAD
-/// Rasterizes `svg` at `size` pixels as egui_extras' SVG loader does.
-fn raster(svg: &[u8], size: [u32; 2]) -> Option<egui::ColorImage> {
-=======
 /// Rasterizes `svg` at `size` pixels as egui_extras' SVG loader does, then applies the grain
 /// transform.
 fn raster(svg: &[u8], size: [u32; 2], grain: art::GrainTransform) -> Option<egui::ColorImage> {
->>>>>>> feature/automation-patterns
     let hint = egui::load::SizeHint::Size {
         width: size[0],
         height: size[1],
         maintain_aspect_ratio: false,
     };
     let options = resvg::usvg::Options::default();
-<<<<<<< HEAD
-    egui_extras::image::load_svg_bytes_with_size(svg, hint, &options).ok()
-}
-
-/// Rasterizes the jobs (svg, size) on `threads` threads, the biggest first.
-fn raster_all(jobs: &[(&'static [u8], [u32; 2])], threads: usize) -> Vec<Option<egui::ColorImage>> {
-=======
     let mut image = egui_extras::image::load_svg_bytes_with_size(svg, hint, &options).ok()?;
     apply_grain(&mut image, grain);
     Some(image)
@@ -676,18 +627,13 @@ fn raster_all(
     jobs: &[(&'static [u8], [u32; 2], art::GrainTransform)],
     threads: usize,
 ) -> Vec<Option<egui::ColorImage>> {
->>>>>>> feature/automation-patterns
     let mut order: Vec<usize> = (0..jobs.len()).collect();
     order.sort_by_key(|&i| std::cmp::Reverse(jobs[i].1[0] * jobs[i].1[1]));
     let images: Vec<std::sync::Mutex<Option<egui::ColorImage>>> =
         jobs.iter().map(|_| Default::default()).collect();
     if threads <= 1 {
         for &i in &order {
-<<<<<<< HEAD
-            *images[i].lock().unwrap() = raster(jobs[i].0, jobs[i].1);
-=======
             *images[i].lock().unwrap() = raster(jobs[i].0, jobs[i].1, jobs[i].2);
->>>>>>> feature/automation-patterns
         }
     } else {
         let next = std::sync::atomic::AtomicUsize::new(0);
@@ -699,11 +645,7 @@ fn raster_all(
                         let Some(&i) = order.get(k) else {
                             break;
                         };
-<<<<<<< HEAD
-                        let image = raster(jobs[i].0, jobs[i].1);
-=======
                         let image = raster(jobs[i].0, jobs[i].1, jobs[i].2);
->>>>>>> feature/automation-patterns
                         *images[i].lock().unwrap() = image;
                     }
                 });
@@ -747,11 +689,7 @@ impl PartTextures {
 
     /// The texture of `key` drawn in pass `pass`, if the map has it. Once per
     /// [`PART_TEXTURE_FRAMES`] passes the textures unused that long are dropped.
-<<<<<<< HEAD
-    fn get(&mut self, key: &(usize, u32, u32), pass: u64) -> Option<egui::load::SizedTexture> {
-=======
     fn get(&mut self, key: &(usize, u32, u32, u16), pass: u64) -> Option<egui::load::SizedTexture> {
->>>>>>> feature/automation-patterns
         if pass >= self.swept + PART_TEXTURE_FRAMES {
             self.swept = pass;
             self.map.retain(|_, t| t.used + PART_TEXTURE_FRAMES > pass);
@@ -762,15 +700,9 @@ impl PartTextures {
     }
 
     /// The texture of the part `uri` at the size it was last rasterized at, if it is kept.
-<<<<<<< HEAD
-    fn last_size(&mut self, uri: usize, pass: u64) -> Option<egui::load::SizedTexture> {
-        let &(w, h) = self.latest.get(&uri)?;
-        self.get(&(uri, w, h), pass)
-=======
     fn last_size(&mut self, uri: usize, hue: u16, pass: u64) -> Option<egui::load::SizedTexture> {
         let &(w, h) = self.latest.get(&uri)?;
         self.get(&(uri, w, h, hue), pass)
->>>>>>> feature/automation-patterns
     }
 }
 
@@ -797,9 +729,6 @@ pub fn flush_part_textures(ctx: &egui::Context) {
         && !ctx.data(|d| d.get_temp(no_preview_id()).unwrap_or(false));
     let now: Vec<_> = pending
         .iter()
-<<<<<<< HEAD
-        .map(|p| (p.svg, p.preview.filter(|_| preview).unwrap_or(p.size)))
-=======
         .map(|p| {
             (
                 p.svg,
@@ -807,7 +736,6 @@ pub fn flush_part_textures(ctx: &egui::Context) {
                 p.grain,
             )
         })
->>>>>>> feature/automation-patterns
         .collect();
     let images = raster_all(&now, threads);
     let mut later = Vec::new();
@@ -825,11 +753,7 @@ pub fn flush_part_textures(ctx: &egui::Context) {
     // the full sizes, on a background thread; a texture dropped meanwhile is set for nothing
     let ctx = ctx.clone();
     std::thread::spawn(move || {
-<<<<<<< HEAD
-        let jobs: Vec<_> = later.iter().map(|p| (p.svg, p.size)).collect();
-=======
         let jobs: Vec<_> = later.iter().map(|p| (p.svg, p.size, p.grain)).collect();
->>>>>>> feature/automation-patterns
         let images = raster_all(&jobs, threads);
         for (mut p, image) in later.into_iter().zip(images) {
             if let Some(image) = image {
@@ -845,8 +769,6 @@ fn paint_part_rotated(ui: &Ui, name: &str, rect: Rect, rot: Option<(f32, Vec2)>)
     paint_part_with(ui, name, rect, rot, Color32::WHITE);
 }
 
-<<<<<<< HEAD
-=======
 /// The cache tag of a grain transform: 0 for none, 1 for gray, 2 for black, and hue + 3 for a
 /// hue shift.
 fn grain_key(grain: art::GrainTransform) -> u16 {
@@ -858,7 +780,6 @@ fn grain_key(grain: art::GrainTransform) -> u16 {
     }
 }
 
->>>>>>> feature/automation-patterns
 /// The texture of `svg` (whose URI is `uri`) at `pixels`, from the context's map, or a new
 /// placeholder whose image `flush_part_textures` rasterizes at the end of the frame. While the
 /// window is being resized a missing size is drawn from the part's last texture instead.
@@ -869,10 +790,7 @@ pub(crate) fn part_texture(
     pixels: Vec2,
     units: Vec2,
     options: egui::TextureOptions,
-<<<<<<< HEAD
-=======
     grain: art::GrainTransform,
->>>>>>> feature/automation-patterns
 ) -> Option<egui::load::SizedTexture> {
     let pass = ctx.cumulative_pass_nr();
     let (now, max) = ctx.input(|i| (i.time, i.max_texture_side));
@@ -883,13 +801,6 @@ pub(crate) fn part_texture(
         )
     });
     let resizing = now < until;
-<<<<<<< HEAD
-    let key = (uri.as_ptr() as usize, pixels.x as u32, pixels.y as u32);
-    let found = ctx.data_mut(|d| {
-        let t = d.get_temp_mut_or_default::<PartTextures>(PartTextures::id());
-        t.get(&key, pass)
-            .or_else(|| resizing.then(|| t.last_size(key.0, pass)).flatten())
-=======
     let grain_key = grain_key(grain);
     let key = (
         uri.as_ptr() as usize,
@@ -904,7 +815,6 @@ pub(crate) fn part_texture(
                 .then(|| t.last_size(key.0, grain_key, pass))
                 .flatten()
         })
->>>>>>> feature/automation-patterns
     });
     if found.is_some() || first {
         return found;
@@ -933,10 +843,7 @@ pub(crate) fn part_texture(
             preview,
             handle: handle.clone(),
             options,
-<<<<<<< HEAD
-=======
             grain,
->>>>>>> feature/automation-patterns
         });
         t.map.insert(
             key,
@@ -961,8 +868,6 @@ fn first_frame_id() -> egui::Id {
     egui::Id::unique("orb-ui first frame")
 }
 
-<<<<<<< HEAD
-=======
 /// Whether `name` is one of the classic skin's grainy panel backgrounds, whose hue the grain
 /// setting changes. The wood sides and the controls stay as they are.
 fn is_grain_part(name: &str) -> bool {
@@ -989,7 +894,6 @@ fn grain_for_part(name: &str) -> art::GrainTransform {
     }
 }
 
->>>>>>> feature/automation-patterns
 fn paint_part_with(ui: &Ui, name: &str, rect: Rect, rot: Option<(f32, Vec2)>, tint: Color32) {
     // A part name no art has (a state the panel does not foresee) draws nothing: it must not
     // close the app (task-156). It is reported once per name.
@@ -997,8 +901,6 @@ fn paint_part_with(ui: &Ui, name: &str, rect: Rect, rot: Option<(f32, Vec2)>, ti
         missing_part(name);
         return;
     };
-<<<<<<< HEAD
-=======
     // The classic skin's grainy panels take the chosen tone; everything else is untouched.
     let grain =
         if art::ui_variant() == crate::settings::UiVariant::Classic && is_grain_part(part.name) {
@@ -1006,7 +908,6 @@ fn paint_part_with(ui: &Ui, name: &str, rect: Rect, rot: Option<(f32, Vec2)>, ti
         } else {
             art::GrainTransform::None
         };
->>>>>>> feature/automation-patterns
     // `rect` is the control's rectangle; the art reaches `bleed` panel pixels beyond it.
     let k = rect.width() / part.w.max(f32::EPSILON);
     let art = rect.expand(part.bleed * k);
@@ -1019,11 +920,7 @@ fn paint_part_with(ui: &Ui, name: &str, rect: Rect, rot: Option<(f32, Vec2)>, ti
     let pixels = (art.round_to_pixels(ppp).size() * ppp).round();
     let units = Vec2::new(part.w, part.h) + Vec2::splat(2.0 * part.bleed);
     let linear = egui::TextureOptions::LINEAR;
-<<<<<<< HEAD
-    let Some(texture) = part_texture(ctx, part.uri, part.svg, pixels, units, linear) else {
-=======
     let Some(texture) = part_texture(ctx, part.uri, part.svg, pixels, units, linear, grain) else {
->>>>>>> feature/automation-patterns
         return;
     };
     let mut image = Image::from_texture(texture)
@@ -1041,6 +938,19 @@ fn paint_part_with(ui: &Ui, name: &str, rect: Rect, rot: Option<(f32, Vec2)>, ti
     image.paint_at(ui, art);
 }
 
+/// The audio failure message: the reason, and on Linux a hint to change the audio configuration.
+fn audio_error_text(why: &str) -> String {
+    let mut text = format!("Audio output: {why}");
+    if cfg!(target_os = "linux") {
+        text.push_str(concat!(
+            "\n\nLinux: the audio output stopped. Check Options > Audio Output (host, device ",
+            "and sample rate; a change applies after restart), and that ALSA, PipeWire or ",
+            "PulseAudio is running on the system."
+        ));
+    }
+    text
+}
+
 impl App {
     /// Reports once, in the message box, that the sound has stopped for good (the rule of
     /// `orb_player::output::Health`); a transient stream error that the sound survives is only
@@ -1052,7 +962,7 @@ impl App {
         }
         if let Some(why) = self.audio_health.as_ref().and_then(|h| h.failure()) {
             self.audio_reported = true;
-            self.fail(format!("Audio output: {why}"));
+            self.fail(audio_error_text(&why));
         }
     }
 
@@ -1081,8 +991,6 @@ impl App {
         // While the file browser, the prompt or the error box is open the panel takes no keys
         // and no clicks of its own.
         if self.browser.is_none() && self.prompt.is_none() && !self.error_open() {
-<<<<<<< HEAD
-=======
             let sc_copy = self.settings.shortcut("copy", shortcuts::COPY);
             let sc_paste = self.settings.shortcut("paste", shortcuts::PASTE);
             let sc_copy_pat = self
@@ -1098,15 +1006,12 @@ impl App {
                 .settings
                 .shortcut("copy_mixer_fx", shortcuts::COPY_MIXER_FX);
 
->>>>>>> feature/automation-patterns
             if shortcuts::consume(ui, &shortcuts::NEW) {
                 self.new_song();
             } else if shortcuts::consume(ui, &shortcuts::OPEN) {
                 self.open_browser(Mode::OpenSong);
             } else if shortcuts::consume(ui, &shortcuts::SAVE) {
                 self.save();
-<<<<<<< HEAD
-=======
             } else if shortcuts::consume(ui, &sc_copy_pat) {
                 if self.panel.transport.song_mode {
                     self.copy_song_mode(
@@ -1140,7 +1045,6 @@ impl App {
                 }
             } else if shortcuts::consume(ui, &sc_paste) {
                 self.paste();
->>>>>>> feature/automation-patterns
             } else {
                 // Ctrl/Cmd+F and +G: the Options menu's two keyboard modes.
                 if shortcuts::consume(ui, &shortcuts::KEYS_SYNTH) {
@@ -1190,11 +1094,7 @@ impl App {
             self.control(ui, &view, c, now);
         }
         self.ctls = ctls;
-<<<<<<< HEAD
-        for (name, x, y, w, h) in layout::foregrounds() {
-=======
         for (name, x, y, w, h) in layout::foregrounds_for(self.settings.ui_variant) {
->>>>>>> feature/automation-patterns
             paint_part(ui, name, view.rect(x, y, w, h));
         }
         self.drum_strips(ui, &view);
@@ -1233,12 +1133,10 @@ impl App {
         self.about_ui(&ctx);
         self.key_help_ui(&ctx);
         self.mod_info_ui(&ctx);
-<<<<<<< HEAD
-=======
         self.automation_editor_ui(&ctx);
         self.all_automation_ui(&ctx);
         self.pattern_automation_ui(&ctx);
->>>>>>> feature/automation-patterns
+        self.patterns_overview_ui(&ctx);
         self.poll_export(&ctx);
         self.update_title(&ctx);
         self.close_if_allowed(&ctx);
@@ -1407,11 +1305,8 @@ impl App {
             "knob" => self.knob(ui, view, c, rect),
             "fader" => self.fader(ui, view, c, rect),
             "display" => {
-<<<<<<< HEAD
-=======
                 let r = self.hit(ui, c, rect);
                 self.automation_gestures(ui, c, &r);
->>>>>>> feature/automation-patterns
                 // n cells of 9 x 16, centered in the display's well
                 let n = (c.w / 9.0) as usize;
                 let frames = behavior::digit_frames(self.panel.display(&c.id), n);
@@ -1427,11 +1322,8 @@ impl App {
             }
             kind => {
                 let r = self.hit(ui, c, rect);
-<<<<<<< HEAD
-=======
                 self.automation_gestures(ui, c, &r);
->>>>>>> feature/automation-patterns
-                let down = r.is_pointer_button_down_on() || self.key_held(&c.id);
+                let down = Self::primary_pointer_down(ui, &r) || self.key_held(&c.id);
                 match kind {
                     "repeat" | "wind" => self.repeat(ui, c, &r),
                     "switch" | "toggle" | "radio" | "trigger" | "grid" => {
@@ -1497,8 +1389,6 @@ impl App {
         )
     }
 
-<<<<<<< HEAD
-=======
     /// True when the middle button goes down while hovering `r`, used as a fallback for
     /// `Response::middle_clicked()` under `Sense::click_and_drag()`: egui defers the click-vs-drag
     /// decision and the middle button is often reserved for view panning, so a middle press on a
@@ -1507,7 +1397,6 @@ impl App {
         r.hovered() && ui.input(|i| i.pointer.button_pressed(PointerButton::Middle))
     }
 
->>>>>>> feature/automation-patterns
     fn gesture(ui: &Ui, c: &Ctl) -> (egui::Id, Gesture) {
         let id = egui::Id::unique(("gesture", &c.kind, &c.id));
         (id, ui.data(|d| d.get_temp(id)).unwrap_or_default())
@@ -1516,19 +1405,24 @@ impl App {
     /// True on the frame the mouse goes down on the control (the action runs at mouse down).
     fn first_press(&self, ui: &Ui, c: &Ctl, r: &Response) -> bool {
         let (id, mut g) = Self::gesture(ui, c);
-        let down = r.is_pointer_button_down_on();
+        let down = Self::primary_pointer_down(ui, r);
         let first = down && !g.down;
         g.down = down;
         ui.data_mut(|d| d.insert_temp(id, g));
         first
     }
 
+    /// Whether the primary button is held on this response (secondary clicks only open editors).
+    fn primary_pointer_down(ui: &Ui, response: &Response) -> bool {
+        response.is_pointer_button_down_on()
+            && ui.input(|i| {
+                i.pointer.button_down(PointerButton::Primary)
+                    || i.pointer.button_pressed(PointerButton::Primary)
+            })
+    }
+
     /// Repeat and wind buttons: one step at mouse down, then the held-button schedule.
     fn repeat(&mut self, ui: &Ui, c: &Ctl, r: &Response) {
-<<<<<<< HEAD
-        let (id, mut g) = Self::gesture(ui, c);
-        let down = r.is_pointer_button_down_on();
-=======
         let gesture_id = Self::gesture(ui, c).0;
         self.repeat_with_id(ui, &c.id, r, gesture_id);
     }
@@ -1543,8 +1437,7 @@ impl App {
         let mut g = ui
             .data(|d| d.get_temp::<Gesture>(gesture_id))
             .unwrap_or_default();
-        let down = response.is_pointer_button_down_on();
->>>>>>> feature/automation-patterns
+        let down = Self::primary_pointer_down(ui, response);
         let time = ui.input(|i| i.time);
         if down && !g.down {
             g.t0 = time;
@@ -1555,23 +1448,20 @@ impl App {
             let t = ((time - g.t0) * 1000.0) as u32;
             let total = 1 + behavior::repeat_extra_steps(t);
             while g.taken < total {
-<<<<<<< HEAD
-                self.panel.arrow(&c.id);
-=======
                 self.panel.arrow(control_id);
->>>>>>> feature/automation-patterns
                 g.taken += 1;
             }
             ui.ctx().request_repaint_after(Duration::from_millis(16));
         }
-<<<<<<< HEAD
-        ui.data_mut(|d| d.insert_temp(id, g));
-=======
         ui.data_mut(|d| d.insert_temp(gesture_id, g));
     }
 
     /// The transport's three-digit bar display and its original skin arrows.
-    pub(crate) fn transport_bar_control(&mut self, ui: &mut Ui, window: &'static str) {
+    pub(crate) fn transport_bar_control(
+        &mut self,
+        ui: &mut Ui,
+        window: impl std::hash::Hash + std::fmt::Debug,
+    ) {
         let size = Vec2::new(39.0, 19.0);
         let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
         let value = self.panel.transport.bar_display();
@@ -1605,19 +1495,18 @@ impl App {
                 Rect::from_min_size(rect.min + Vec2::new(27.0, y), Vec2::new(part.w, part.h));
             let response = ui.interact(
                 arrow_rect,
-                egui::Id::unique(("window_transport_bar", window, control_id)),
+                egui::Id::unique(("window_transport_bar", &window, control_id)),
                 Sense::click_and_drag(),
             );
-            let gesture_id = egui::Id::unique(("window_transport_bar_repeat", window, control_id));
+            let gesture_id = egui::Id::unique(("window_transport_bar_repeat", &window, control_id));
             self.repeat_with_id(ui, control_id, &response, gesture_id);
-            let name = if response.is_pointer_button_down_on() {
+            let name = if Self::primary_pointer_down(ui, &response) {
                 pressed
             } else {
                 rest
             };
             paint_part(ui, name, arrow_rect);
         }
->>>>>>> feature/automation-patterns
     }
 
     /// Where the pointer is, in panel pixels.
@@ -1631,10 +1520,6 @@ impl App {
             .map(|p| view.to_panel(p))
     }
 
-<<<<<<< HEAD
-    fn knob(&mut self, ui: &mut Ui, view: &View, c: &Ctl, rect: Rect) {
-        let r = self.hit(ui, c, rect);
-=======
     /// Automation gestures: right-click opens an editor, Ctrl/Cmd+right opens the overview,
     /// and middle-click resets this bar (or the whole song with Ctrl/Cmd).
     fn automation_gestures(&mut self, ui: &Ui, c: &Ctl, response: &Response) {
@@ -1913,9 +1798,8 @@ impl App {
     fn knob(&mut self, ui: &mut Ui, view: &View, c: &Ctl, rect: Rect) {
         let r = self.hit(ui, c, rect);
         self.automation_gestures(ui, c, &r);
->>>>>>> feature/automation-patterns
         let (id, mut g) = Self::gesture(ui, c);
-        let down = r.is_pointer_button_down_on();
+        let down = Self::primary_pointer_down(ui, &r);
         if r.hovered() || down {
             ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
         }
@@ -1959,12 +1843,9 @@ impl App {
 
     fn fader(&mut self, ui: &mut Ui, view: &View, c: &Ctl, rect: Rect) {
         let r = self.hit(ui, c, rect);
-<<<<<<< HEAD
-=======
         self.automation_gestures(ui, c, &r);
->>>>>>> feature/automation-patterns
         let (id, mut g) = Self::gesture(ui, c);
-        let down = r.is_pointer_button_down_on();
+        let down = Self::primary_pointer_down(ui, &r);
         if down {
             self.panel.held = Some(c.id.clone());
             if !g.down {
@@ -2007,7 +1888,7 @@ impl App {
             );
             let gid = egui::Id::unique(("gesture", name));
             let mut g: Gesture = ui.data(|d| d.get_temp(gid)).unwrap_or_default();
-            let down = r.is_pointer_button_down_on();
+            let down = Self::primary_pointer_down(ui, &r);
             if down {
                 let Some(p) = (if g.down {
                     Self::pointer(ui, view)
@@ -2079,7 +1960,7 @@ impl App {
                 egui::Id::unique(("hit", name)),
                 Sense::click_and_drag(),
             );
-            if !r.is_pointer_button_down_on() {
+            if !Self::primary_pointer_down(ui, &r) {
                 continue;
             }
             let Some(p) = Self::pointer(ui, view) else {
@@ -2216,8 +2097,6 @@ mod geometry_tests {
         }
         assert_eq!(crate::model::GR_OFF, art::GR_OFF);
     }
-<<<<<<< HEAD
-=======
 
     /// The grain hue rotate keeps neutral pixels unchanged and rotates a pure hue.
     #[test]
@@ -2275,7 +2154,6 @@ mod geometry_tests {
         );
         assert!(p.r() > 0x00, "still distinguishable from pure black");
     }
->>>>>>> feature/automation-patterns
 }
 
 fn save_png(path: &PathBuf, image: &egui::ColorImage) -> Result<(), image::ImageError> {

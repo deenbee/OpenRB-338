@@ -14,15 +14,23 @@ path = "src/lib.rs"
 name = "OpenRB-338"
 path = "src/main.rs"
 
+[features]
+# Forward the native PipeWire/PulseAudio audio hosts of `orb-player` (see its Cargo.toml). On
+# by default; `--no-default-features` builds the ALSA-only output the snap wants. It forwards
+# through `orb-cli` too, because the UI depends on it and feature unification would otherwise
+# switch the hosts back on.
+default = ["native-audio"]
+native-audio = ["orb-player/native-audio", "orb-cli/native-audio"]
+
 [dependencies]
 orb-engine = { path = "../orb-engine" }
 # The player the panel drives (task-045) and its audio output.
-orb-player = { path = "../orb-player" }
+orb-player = { path = "../orb-player", default-features = false }
 # Song files and the standard mod (the built-in drum samples).
 rbs = { path = "../rbs" }
 rbm = { path = "../rbm" }
 # The export and the mod lookup of `orb render` (task-047).
-orb-cli = { path = "../orb-cli" }
+orb-cli = { path = "../orb-cli", default-features = false }
 # The settings file (task-107).
 serde = { version = "1", features = ["derive"] }
 toml = "=0.9.12"

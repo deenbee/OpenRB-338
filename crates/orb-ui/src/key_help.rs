@@ -302,8 +302,6 @@ pub fn groups(is_mac: bool) -> Vec<Group> {
                     &shortcuts::KEYS_PATTERNS,
                     "Options > Select Patterns from Keyboard",
                 ),
-<<<<<<< HEAD
-=======
                 menu_row(
                     is_mac,
                     &shortcuts::COPY,
@@ -326,7 +324,6 @@ pub fn groups(is_mac: bool) -> Vec<Group> {
                     "Edit > Copy All 4 Machines Patterns",
                 ),
                 menu_row(is_mac, &shortcuts::COPY_MIXER_FX, "Edit > Copy Mixer & FX"),
->>>>>>> feature/automation-patterns
             ],
         },
         Group {
@@ -573,8 +570,6 @@ pub fn groups(is_mac: bool) -> Vec<Group> {
                 ),
             ],
         },
-<<<<<<< HEAD
-=======
         Group {
             title: "Mouse shortcuts on controls (Song Mode)",
             mode: None,
@@ -610,7 +605,6 @@ pub fn groups(is_mac: bool) -> Vec<Group> {
                 ),
             ],
         },
->>>>>>> feature/automation-patterns
     ]
 }
 
@@ -817,12 +811,6 @@ mod tests {
                 .map(|r| r.keys.clone())
                 .collect()
         };
-<<<<<<< HEAD
-        assert_eq!(text(true), ["Cmd+N", "Cmd+O", "Cmd+S", "Cmd+F", "Cmd+G"]);
-        assert_eq!(
-            text(false),
-            ["Ctrl+N", "Ctrl+O", "Ctrl+S", "Ctrl+F", "Ctrl+G"]
-=======
         assert_eq!(
             text(true),
             [
@@ -854,7 +842,6 @@ mod tests {
                 "Ctrl+Shift+A",
                 "Ctrl+Alt+M",
             ]
->>>>>>> feature/automation-patterns
         );
     }
 

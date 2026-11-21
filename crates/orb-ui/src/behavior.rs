@@ -93,15 +93,12 @@ pub fn pattern_grid_button(dx: f32, dy: f32) -> u8 {
     (4 * row + col + 1) as u8
 }
 
-<<<<<<< HEAD
-=======
 /// The display label of pattern 0..=31 (A1..D8).
 pub fn pattern_label(p: u8) -> String {
     let p = p.min(31);
     format!("{}{}", (b'A' + p / 8) as char, p % 8 + 1)
 }
 
->>>>>>> feature/automation-patterns
 /// The position (0 or 1) a two-position switch draws for its controller value `v`, which a
 /// song may hold out of 0..=1 (RB-AM.rbm's demo song has a 303 waveform of 127, task-156).
 ///

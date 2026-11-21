@@ -15,8 +15,6 @@ pub const KEYS_PATTERNS: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COM
 /// The file browser's path field.
 pub const EDIT_PATH: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::L);
 
-<<<<<<< HEAD
-=======
 /// Standard Copy.
 pub const COPY: KeyboardShortcut = KeyboardShortcut::new(Modifiers::COMMAND, Key::C);
 /// Standard Paste.
@@ -88,7 +86,6 @@ pub fn parse_shortcut(s: &str) -> Option<KeyboardShortcut> {
     Some(KeyboardShortcut::new(mods, key))
 }
 
->>>>>>> feature/automation-patterns
 /// The text of a shortcut for a platform: "Cmd+N" on macOS, "Ctrl+N" elsewhere (the macOS
 /// symbol form is not in egui's default font).
 pub fn text_for(sc: &KeyboardShortcut, is_mac: bool) -> String {
@@ -118,8 +115,6 @@ mod tests {
             assert_eq!(text_for(sc, false), format!("Ctrl+{k}"));
         }
     }
-<<<<<<< HEAD
-=======
 
     #[test]
     fn parse_shortcut_parses_modifiers_and_keys() {
@@ -130,5 +125,4 @@ mod tests {
         assert_eq!(sc2.modifiers, Modifiers::COMMAND);
         assert_eq!(sc2.logical_key, Key::V);
     }
->>>>>>> feature/automation-patterns
 }

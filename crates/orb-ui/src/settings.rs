@@ -6,14 +6,11 @@
 //! (paths, absent until a file is chosen: the folder of the last song chosen in Open, Save As
 //! or Export, and of the last mod; task-144), `startup_sound` (a bool) and the table
 //! `preferred_mods` (an INFO name to the file name preferred among mods that share it,
-<<<<<<< HEAD
-//! task-151), so it can be edited by hand. Where it lives: `$ORB_UI_CONFIG` if set; else
-=======
 //! task-151), the UI variant (`ui_variant`), the classic skin's grainy panel tone
-//! (`grain_color`, with the free hue `grain_hue` in degrees when it is `custom`) and the desk's
-//! texture pattern (`desk_texture`), so it can be edited by hand. Where it lives: `$ORB_UI_CONFIG`
-//! if set; else
->>>>>>> feature/automation-patterns
+//! (`grain_color`, with the free hue `grain_hue` in degrees when it is `custom`), the desk's
+//! texture pattern (`desk_texture`) and the audio output (`audio_host`, `audio_device`,
+//! `audio_sample_rate`), so it can be edited by hand. Where it lives: `$ORB_UI_CONFIG` if set;
+//! else
 //! `OpenRB-338/ui.toml` in the platform's configuration folder (`$XDG_CONFIG_HOME`, or
 //! `~/.config` on Linux, `~/Library/Application Support` on macOS, `%APPDATA%` on Windows).
 //! Reading never fails: a missing or damaged file gives the defaults (a damaged file stays as
@@ -29,18 +26,11 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-<<<<<<< HEAD
-use serde::Serialize;
-=======
 use serde::{Deserialize, Serialize};
->>>>>>> feature/automation-patterns
 
 /// How many recent folders are kept.
 pub const MAX_RECENT: usize = 8;
 
-<<<<<<< HEAD
-#[derive(Clone, Debug, PartialEq, Eq)]
-=======
 /// Which UI variant the app draws: the classic ReBirth look or the modern redesign.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -128,7 +118,6 @@ impl std::fmt::Display for GrainColor {
 pub type DeskTexture = crate::art::DeskTexture;
 
 #[derive(Clone, Debug, PartialEq)]
->>>>>>> feature/automation-patterns
 pub struct Settings {
     /// The original's preference "Play Mod Startup Sound" (on by default: the preferences'
     /// constructor `sub_41CAA4` sets it, 0x41CB13): a mod change plays the mod's startup
@@ -150,8 +139,6 @@ pub struct Settings {
     /// to file name. Stored as the table `preferred_mods`. Names are compared ignoring ASCII
     /// case ([`Settings::preferred_mod`]).
     pub preferred_mods: BTreeMap<String, String>,
-<<<<<<< HEAD
-=======
     /// Configured keyboard shortcuts (action name -> shortcut text, e.g. "copy" -> "Ctrl+C").
     pub shortcuts: BTreeMap<String, String>,
     /// Which UI variant to draw (`classic` or `modern`).
@@ -162,7 +149,12 @@ pub struct Settings {
     pub grain_hue: f32,
     /// The desk (around the panel) texture pattern.
     pub desk_texture: DeskTexture,
->>>>>>> feature/automation-patterns
+    /// The audio output host (backend), lowercase, e.g. `alsa`; `None` is the default host.
+    pub audio_host: Option<String>,
+    /// The audio output device id (`host:device`); `None` is the default device.
+    pub audio_device: Option<String>,
+    /// The audio output sample rate in Hz; `None` is 44.1 kHz when offered, else the default.
+    pub audio_sample_rate: Option<u32>,
     /// Where this was read from and is written to (`None`: never persisted, as in tests).
     pub file: Option<PathBuf>,
 }
@@ -177,14 +169,14 @@ impl Default for Settings {
             last_song_dir: None,
             last_mod_dir: None,
             preferred_mods: BTreeMap::new(),
-<<<<<<< HEAD
-=======
             shortcuts: BTreeMap::new(),
             ui_variant: UiVariant::default(),
             grain_color: GrainColor::default(),
             grain_hue: 0.0,
             desk_texture: DeskTexture::default(),
->>>>>>> feature/automation-patterns
+            audio_host: None,
+            audio_device: None,
+            audio_sample_rate: None,
             file: None,
         }
     }
@@ -246,8 +238,6 @@ struct Stored<'a> {
     // a table, so last
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     preferred_mods: BTreeMap<&'a str, &'a str>,
-<<<<<<< HEAD
-=======
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     shortcuts: BTreeMap<&'a str, &'a str>,
     ui_variant: UiVariant,
@@ -255,7 +245,12 @@ struct Stored<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     grain_hue: Option<f32>,
     desk_texture: DeskTexture,
->>>>>>> feature/automation-patterns
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audio_host: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audio_device: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audio_sample_rate: Option<u32>,
 }
 
 /// The path when TOML can hold it (valid UTF-8). A lossy string would name another folder, so
@@ -312,11 +307,6 @@ impl Settings {
                 }
             }
         }
-<<<<<<< HEAD
-        s
-    }
-
-=======
         if let Some(t) = table.get("shortcuts").and_then(|v| v.as_table()) {
             for (name, val) in t {
                 if let Some(v) = val.as_str().filter(|v| !v.is_empty()) {
@@ -356,6 +346,21 @@ impl Settings {
                 _ => DeskTexture::Fine,
             };
         }
+        s.audio_host = table
+            .get("audio_host")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned);
+        s.audio_device = table
+            .get("audio_device")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned);
+        s.audio_sample_rate = table
+            .get("audio_sample_rate")
+            .and_then(|v| v.as_integer())
+            .filter(|n| *n > 0)
+            .map(|n| n as u32);
         s
     }
 
@@ -371,7 +376,6 @@ impl Settings {
             .unwrap_or(default)
     }
 
->>>>>>> feature/automation-patterns
     /// The file preferred for the INFO name `name` (ignoring ASCII case), if one is set.
     pub fn preferred_mod(&self, name: &str) -> Option<&str> {
         self.preferred_mods
@@ -407,8 +411,6 @@ impl Settings {
                 .iter()
                 .map(|(n, f)| (n.as_str(), f.as_str()))
                 .collect(),
-<<<<<<< HEAD
-=======
             shortcuts: self
                 .shortcuts
                 .iter()
@@ -418,7 +420,9 @@ impl Settings {
             grain_color: self.grain_color,
             grain_hue: (self.grain_color == GrainColor::Custom).then_some(self.grain_hue),
             desk_texture: self.desk_texture,
->>>>>>> feature/automation-patterns
+            audio_host: self.audio_host.as_deref(),
+            audio_device: self.audio_device.as_deref(),
+            audio_sample_rate: self.audio_sample_rate,
         })
         .map_err(|e| format!("{}: cannot encode: {e}", file.display()))?;
         if let Some(dir) = file.parent() {
@@ -444,8 +448,6 @@ impl Settings {
         self.recent.truncate(MAX_RECENT);
     }
 }
-<<<<<<< HEAD
-=======
 
 #[cfg(test)]
 mod tests {
@@ -497,5 +499,25 @@ mod tests {
         assert_eq!(loaded.grain_hue, 60.0);
         std::fs::remove_dir_all(&dir).unwrap();
     }
+
+    #[test]
+    fn audio_output_round_trips_through_the_toml_file() {
+        let dir =
+            std::env::temp_dir().join(format!("orb-ui-settings-audio-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("ui.toml");
+        let mut s = Settings {
+            audio_host: Some("pipewire".into()),
+            audio_device: Some("alsa:hw:0,0".into()),
+            audio_sample_rate: Some(48_000),
+            ..Settings::default()
+        };
+        s.file = Some(file.clone());
+        s.save().unwrap();
+        let loaded = Settings::load_from(&file);
+        assert_eq!(loaded.audio_host.as_deref(), Some("pipewire"));
+        assert_eq!(loaded.audio_device.as_deref(), Some("alsa:hw:0,0"));
+        assert_eq!(loaded.audio_sample_rate, Some(48_000));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }
->>>>>>> feature/automation-patterns

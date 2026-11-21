@@ -16,6 +16,14 @@ triple_buffer = "9.0.0"
 # The resampler for a device that does not offer 44.1 kHz (sinc only: no FFT resampler).
 rubato = { version = "5.0.1", default-features = false }
 
+[features]
+# The native PipeWire and PulseAudio output hosts of cpal (the ALSA host is always compiled in
+# on Linux). The `cpal/pipewire` and `cpal/pulseaudio` features are no-ops outside Linux, and
+# only Linux builds need the client libraries at build time (docs/building.md). On by default;
+# a build that must stay ALSA-only (the snap) disables it with `--no-default-features`.
+default = ["native-audio"]
+native-audio = ["cpal/pipewire", "cpal/pulseaudio"]
+
 [dev-dependencies]
 rbs = { path = "../rbs" }
 # The recrypted mods of the mod-change sessions (tests/live_messages.rs).

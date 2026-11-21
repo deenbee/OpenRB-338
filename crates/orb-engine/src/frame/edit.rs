@@ -240,8 +240,6 @@ impl Engine {
             }
         }
     }
-<<<<<<< HEAD
-=======
 
     /// Deletes events from track `track` in `[tick_start, tick_end)` matching `ctrl`.
     pub fn delete_events(
@@ -260,5 +258,4 @@ impl Engine {
     pub fn add_events(&mut self, track: usize, events: &[crate::song::TrackEvent]) -> bool {
         self.frame.seq.add_events(track, events)
     }
->>>>>>> feature/automation-patterns
 }

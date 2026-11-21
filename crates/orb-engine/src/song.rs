@@ -54,8 +54,6 @@ impl Device {
         Device::ALL.get(id as usize).copied()
     }
 
-<<<<<<< HEAD
-=======
     pub fn name(self) -> &'static str {
         match self {
             Device::Mixer => "Mixer",
@@ -70,7 +68,6 @@ impl Device {
         }
     }
 
->>>>>>> feature/automation-patterns
     /// The `sub` byte of the device's data message (song msg 41), which each device's host-message
     /// handler takes as "here is my parameter and pattern block".
     pub fn data_sub(self) -> u8 {

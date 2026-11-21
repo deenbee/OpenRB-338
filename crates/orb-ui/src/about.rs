@@ -13,29 +13,16 @@ const LOGO_SCALE: f32 = 2.0;
 /// The app icon part and the size it is shown at.
 pub const ICON_PART: &str = "app_icon";
 const ICON_SIZE: f32 = 64.0;
-<<<<<<< HEAD
-/// The content area below the title bar and the x of the version and the link. The mockup's
-/// window is 360 wide; the link lines need about 90 more at this alignment.
-/// Widened from 380 to 450 (task-138): "Song collection: <link>" ends at about 434 pt (x 108 + 326)
-/// and with 380 the line grew the window or touched its edge.
-=======
 /// The content area below the title bar. Its width leaves room for the collection links without
 /// wrapping and lets their label/link group sit centered below the wordmark.
->>>>>>> feature/automation-patterns
 const CONTENT_W: f32 = 450.0;
 /// The width of the label column of the collection lines (the links start at TEXT_X + this).
 const LABEL_W: f32 = 100.0;
 /// 156 with one link line (task-115), plus two lines at the same 22 pt spacing (task-138),
-<<<<<<< HEAD
-/// plus 6 since the text rows moved down to clear the wordmark's plate (task-179).
-const CONTENT_H: f32 = 206.0;
-const TEXT_X: f32 = 108.0;
-=======
 /// plus one more line for the fork URL (task-224), plus 6 since the text rows moved down to
 /// clear the wordmark's plate (task-179).
 const CONTENT_H: f32 = 228.0;
 const TEXT_X: f32 = 58.0;
->>>>>>> feature/automation-patterns
 /// The gray plate under the wordmark (task-179): the part and its place in the content (the
 /// logo canvas at 2x, 4 less below); the icon is centered on it.
 const PLATE_PART: &str = "about_plate";
@@ -46,15 +33,10 @@ const ROW0: f32 = 110.0;
 
 /// The name of the app.
 pub const NAME: &str = "OpenRB-338";
-<<<<<<< HEAD
-/// The project page.
-pub const URL: &str = "https://github.com/pingw33n/OpenRB-338";
-=======
 /// The original project page (the reimplementation this fork is based on).
 pub const URL: &str = "https://github.com/pingw33n/OpenRB-338";
 /// The user's public fork of the project.
 pub const FORK_URL: &str = "https://github.com/deenbee/OpenRB-338";
->>>>>>> feature/automation-patterns
 /// The user's public collections, shown under the project page as `label url` (task-138).
 /// The user's song collection.
 pub const SONGS_URL: &str = "https://github.com/pingw33n/rb-songs";
@@ -159,12 +141,6 @@ impl App {
                 line(ui, ROW0 + 22.0, &|ui| {
                     ui.hyperlink_to(URL, URL);
                 });
-<<<<<<< HEAD
-                for (i, (label, url)) in COLLECTIONS.into_iter().enumerate() {
-                    // the label and the link each in a rect of their own, so the links start at
-                    // exactly the same x whatever the width of the label
-                    let y = ROW0 + 44.0 + 22.0 * i as f32;
-=======
                 line(ui, ROW0 + 44.0, &|ui| {
                     ui.label(RichText::new("Fork:").color(INK_DIM));
                 });
@@ -175,7 +151,6 @@ impl App {
                     // the label and the link each in a rect of their own, so the links start at
                     // exactly the same x whatever the width of the label
                     let y = ROW0 + 66.0 + 22.0 * i as f32;
->>>>>>> feature/automation-patterns
                     line(ui, y, &|ui| {
                         ui.label(RichText::new(label).color(INK_DIM));
                     });

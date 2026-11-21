@@ -41,6 +41,13 @@ esac
 # are in target/<target>/dist/.
 profile=dist
 cargo_args=(--profile "$profile" --locked --target "$target" -p orb-cli -p orb-ui)
+# Linux release artefacts (the .tar.gz and, from its binaries, the AppImage) stay ALSA-only,
+# like the snap: the ALSA plugins route to PulseAudio/PipeWire, so the binaries need no
+# libpipewire/libpulse at run time and the release jobs need no client library headers.
+# Development and CI builds keep the native hosts (the default `native-audio` feature).
+if [ "$os" = linux ]; then
+    cargo_args+=(--no-default-features)
+fi
 target_dir=${CARGO_TARGET_DIR:-$root/target}
 
 build_docker() {

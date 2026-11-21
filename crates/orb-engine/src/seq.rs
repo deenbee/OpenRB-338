@@ -1050,8 +1050,6 @@ impl Sequencer {
         self.revision += 1;
         true
     }
-<<<<<<< HEAD
-=======
 
     /// Deletes events from track `track` whose tick is in `[tick_start, tick_end)` and whose
     /// controller matches `ctrl` (or any controller when `ctrl` is `None`).
@@ -1085,7 +1083,6 @@ impl Sequencer {
         }
         removed
     }
->>>>>>> feature/automation-patterns
 }
 
 /// The unit tests' track: one track with a pool of its own.

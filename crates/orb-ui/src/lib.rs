@@ -8,17 +8,11 @@
 pub mod about;
 pub mod app;
 pub mod art;
-<<<<<<< HEAD
-pub mod backdrop;
-pub mod behavior;
-pub mod browser;
-=======
 pub mod automation_editor;
 pub mod backdrop;
 pub mod behavior;
 pub mod browser;
 pub mod clipboard;
->>>>>>> feature/automation-patterns
 pub mod crash;
 pub mod document;
 pub mod error_box;
@@ -32,10 +26,7 @@ pub mod menu;
 pub mod mod_info;
 pub mod model;
 pub mod palette;
-<<<<<<< HEAD
-=======
 pub mod pattern_automation;
->>>>>>> feature/automation-patterns
 pub mod session;
 pub mod settings;
 pub mod shortcuts;

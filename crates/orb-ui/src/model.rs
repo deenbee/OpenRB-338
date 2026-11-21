@@ -295,11 +295,8 @@ pub struct Panel {
     switches: HashMap<String, u8>,
     numbers: HashMap<String, i32>,
     flam_button: bool,
-<<<<<<< HEAD
-=======
     /// Per pattern section: bar number (1..=999) -> pattern number (1..=32).
     pub pattern_automation: [HashMap<i32, u8>; 4],
->>>>>>> feature/automation-patterns
 }
 
 impl Default for Panel {
@@ -357,10 +354,7 @@ impl Panel {
             switches: HashMap::new(),
             numbers: HashMap::new(),
             flam_button: false,
-<<<<<<< HEAD
-=======
             pattern_automation: Default::default(),
->>>>>>> feature/automation-patterns
         };
         for c in crate::layout::controls() {
             match c.kind.as_str() {
@@ -1040,9 +1034,6 @@ impl Panel {
             (s, "edit_step") if s.starts_with("tb303_") => {
                 Some(self.synth[index_of(s, "tb303_")?.min(1)].edit as i32 + 1)
             }
-<<<<<<< HEAD
-            _ => self.numbers.get(id).copied(),
-=======
             _ => {
                 let v = self.numbers.get(id).copied();
                 // Clamp the displayed number to its valid range: delay steps 1..=32, pcf pattern
@@ -1053,7 +1044,6 @@ impl Panel {
                     _ => v,
                 }
             }
->>>>>>> feature/automation-patterns
         }
     }
 

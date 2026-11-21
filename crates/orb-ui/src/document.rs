@@ -301,8 +301,6 @@ mod tests {
     }
 
     #[test]
-<<<<<<< HEAD
-=======
     fn pattern_selection_keeps_legacy_track_number_and_bar_position() {
         let mut s = rbs::Song::empty();
         let mut tracks: [Vec<TrackEvent>; 9] = Default::default();
@@ -329,7 +327,6 @@ mod tests {
     }
 
     #[test]
->>>>>>> feature/automation-patterns
     #[cfg(debug_assertions)]
     #[should_panic(expected = "events not sorted by position")]
     fn unsorted_engine_tracks_are_a_model_bug() {

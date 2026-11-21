@@ -13,12 +13,18 @@ path = "src/lib.rs"
 name = "orb"
 path = "src/main.rs"
 
+[features]
+# Forward the native PipeWire/PulseAudio audio hosts of `orb-player` (see its Cargo.toml). On
+# by default; `--no-default-features` builds the ALSA-only output the snap wants.
+default = ["native-audio"]
+native-audio = ["orb-player/native-audio"]
+
 [dependencies]
 rbs = { path = "../rbs" }
 orb-engine = { path = "../orb-engine" }
 rbm = { path = "../rbm" }
 # orb play.
-orb-player = { path = "../orb-player" }
+orb-player = { path = "../orb-player", default-features = false }
 clap = { version = "4.6.7", features = ["derive"] }
 flacenc = "0.5.1"
 vorbis_rs = "0.5.6"

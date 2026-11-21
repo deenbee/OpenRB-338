@@ -42,11 +42,7 @@ use orb_engine::tables::Tables;
 use orb_engine::tr909;
 use orb_player::{Audio, CALL_FRAMES, Command, LiveBlock, Player, Preview};
 
-<<<<<<< HEAD
-use crate::model::{Event, Panel, Step303};
-=======
 use crate::model::{BAR, Event, Panel, Step303};
->>>>>>> feature/automation-patterns
 
 /// The devices of the four pattern sections (rows).
 pub const ROW_DEVICES: [Device; 4] = [
@@ -252,10 +248,7 @@ pub fn mixer_target(id: &str) -> Option<MixerTarget> {
         "master.fader" => return Some(MixerTarget::Global(0)),
         "mixer.comp_id" => return Some(MixerTarget::Global(1)),
         "mixer.pcf_id" => return Some(MixerTarget::Global(2)),
-<<<<<<< HEAD
-=======
         "master.comp" => return Some(MixerTarget::Global(1)),
->>>>>>> feature/automation-patterns
         _ => {}
     }
     let (sec, name) = id.split_once('.')?;
@@ -270,11 +263,8 @@ pub fn mixer_target(id: &str) -> Option<MixerTarget> {
         "pan" => 2,
         "delay" => 3,
         "dist" => 4,
-<<<<<<< HEAD
-=======
         "pcf" => 5,
         "comp" => 6,
->>>>>>> feature/automation-patterns
         _ => return None,
     };
     (c < 4).then_some(MixerTarget::Channel(c, k))
@@ -447,8 +437,6 @@ impl Link {
         &self.loaded
     }
 
-<<<<<<< HEAD
-=======
     /// The pattern changes stored in standard RBS device tracks (controller 1), indexed by bar.
     /// Tick-zero events are the initial pattern state, already stored in the device block.
     pub fn pattern_automation(&self) -> [HashMap<i32, u8>; 4] {
@@ -460,13 +448,12 @@ impl Link {
             let track = ROW_DEVICES[row].id() as usize;
             tracks[track]
                 .iter()
-                .filter(|event| event.ctrl == 1 && event.tick > 0)
+                .filter(|event| event.ctrl == 1 && event.tick >= 0)
                 .map(|event| (event.tick / BAR + 1, event.value.min(31) + 1))
                 .collect()
         })
     }
 
->>>>>>> feature/automation-patterns
     /// The device parameters Save writes when the engine plays the open song in song mode:
     /// `Some` from the first snapshot the panel follows that is in song mode, `None` in pattern
     /// mode (Save writes the panel's values, the live ones, as the original's queries do then)
@@ -518,8 +505,6 @@ impl Link {
         &self.patterns
     }
 
-<<<<<<< HEAD
-=======
     /// The bytes of pattern `p` (0..=31) of row `r` (0..=3).
     pub fn pattern_bytes(&self, r: usize, p: u8) -> Option<Vec<u8>> {
         if r >= 4 || p > 31 {
@@ -616,7 +601,6 @@ impl Link {
         self.flush_marked();
     }
 
->>>>>>> feature/automation-patterns
     // ---- loading ------------------------------------------------------------------------
 
     /// Opens `song`: builds it and queues it as the newest song, and resets the panel to its
@@ -635,10 +619,7 @@ impl Link {
         self.queue_song(engine, samples, panel);
         let g = &song.globals;
         *panel = Panel::new();
-<<<<<<< HEAD
-=======
         panel.pattern_automation = self.pattern_automation();
->>>>>>> feature/automation-patterns
         let t = &mut panel.transport;
         t.tempo = g.tempo as i32;
         t.song_mode = g.song_mode != 0;
@@ -1186,8 +1167,6 @@ impl Link {
         }
         self.player.collect_garbage();
         self.follow(panel);
-<<<<<<< HEAD
-=======
         panel.pattern_automation = self.pattern_automation();
     }
 }
@@ -1217,9 +1196,8 @@ mod pattern_automation_tests {
             },
         ];
         let automation = Link::pattern_automation_from_tracks(&tracks);
-        assert!(!automation[0].contains_key(&1));
+        assert_eq!(automation[0].get(&1), Some(&8));
         assert_eq!(automation[0].get(&2), Some(&13));
         assert!(automation[1].is_empty());
->>>>>>> feature/automation-patterns
     }
 }

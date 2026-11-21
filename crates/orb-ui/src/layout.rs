@@ -1,20 +1,13 @@
 //! Where the controls and the section backgrounds sit, in panel pixels
-<<<<<<< HEAD
-//! (`assets/ui/layout.tsv` and the README's background table).
-=======
 //! (`assets/ui/layout.tsv`, `assets/modern_ui/layout.tsv` and the README's background table).
 
 use crate::settings::UiVariant;
->>>>>>> feature/automation-patterns
 
 pub const PANEL_W: f32 = 624.0;
 pub const PANEL_H: f32 = 510.0;
 
 const LAYOUT_TSV: &str = include_str!("../../../assets/ui/layout.tsv");
-<<<<<<< HEAD
-=======
 const MODERN_LAYOUT_TSV: &str = include_str!("../../../assets/modern_ui/layout.tsv");
->>>>>>> feature/automation-patterns
 
 /// A control's rectangle and the part that draws its default state.
 #[derive(Clone, Debug)]
@@ -47,10 +40,6 @@ impl Ctl {
 
 /// Parses `layout.tsv`.
 pub fn controls() -> Vec<Ctl> {
-<<<<<<< HEAD
-    LAYOUT_TSV
-        .lines()
-=======
     parse_controls(LAYOUT_TSV)
 }
 
@@ -72,7 +61,6 @@ pub fn controls_for(variant: UiVariant) -> Vec<Ctl> {
 
 fn parse_controls(tsv: &str) -> Vec<Ctl> {
     tsv.lines()
->>>>>>> feature/automation-patterns
         .skip(1)
         .map(|line| {
             let f: Vec<&str> = line.split('\t').collect();
@@ -139,8 +127,6 @@ pub fn foregrounds() -> [(&'static str, f32, f32, f32, f32); 2] {
     ]
 }
 
-<<<<<<< HEAD
-=======
 /// Modern backgrounds already include the TR-808 and PCF captions.
 pub fn foregrounds_for(variant: UiVariant) -> Vec<(&'static str, f32, f32, f32, f32)> {
     match variant {
@@ -149,7 +135,6 @@ pub fn foregrounds_for(variant: UiVariant) -> Vec<(&'static str, f32, f32, f32, 
     }
 }
 
->>>>>>> feature/automation-patterns
 /// The focus bar of row `r` (0..=3): (x, y, w, h).
 pub fn focus_bar(r: usize) -> (f32, f32, f32, f32) {
     (86.0, 50.0 + 115.0 * r as f32, 4.0, 115.0)
@@ -191,8 +176,6 @@ mod tests {
     }
 
     #[test]
-<<<<<<< HEAD
-=======
     fn modern_controls_use_modern_geometry_and_keep_new_303_leds() {
         let controls = controls_for(UiVariant::Modern);
         let find = |id: &str| controls.iter().find(|c| c.id == id).unwrap();
@@ -216,7 +199,6 @@ mod tests {
     }
 
     #[test]
->>>>>>> feature/automation-patterns
     fn backgrounds_match_the_art_generator() {
         let parts = orb_ui_art::parts::all_parts();
         let l = orb_ui_art::layout::layout(&parts);

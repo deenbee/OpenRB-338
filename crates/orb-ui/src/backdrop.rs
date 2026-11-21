@@ -31,13 +31,6 @@ pub const TILE: f32 = 256.0;
 pub fn paint(ui: &Ui, avail: Rect, view: &View) {
     let painter = ui.painter();
     let mut m = Mesh::default();
-<<<<<<< HEAD
-    for (p, c) in [
-        (avail.left_top(), DESK_TOP),
-        (avail.right_top(), DESK_TOP),
-        (avail.right_bottom(), DESK_BOTTOM),
-        (avail.left_bottom(), DESK_BOTTOM),
-=======
     // The desk follows the classic skin's grain tone so the whole surface stays coherent.
     let grain = if crate::art::ui_variant() == crate::settings::UiVariant::Classic {
         crate::art::grain()
@@ -58,7 +51,6 @@ pub fn paint(ui: &Ui, avail: Rect, view: &View) {
         (avail.right_top(), top),
         (avail.right_bottom(), bottom),
         (avail.left_bottom(), bottom),
->>>>>>> feature/automation-patterns
     ] {
         m.colored_vertex(p, c);
     }
@@ -70,17 +62,12 @@ pub fn paint(ui: &Ui, avail: Rect, view: &View) {
     let tall = unit.height() < avail.height() - 0.5;
     // The tile only where the desk shows, and at one pixel per point whatever the density: its
     // noise is the start's most expensive raster (about 200 ms at 2x on an M-series Mac), and
-<<<<<<< HEAD
-    // a soft speckle at a tenth of opacity on a dark desk does not need more.
-    if let Some(part) = art::part("desk_tile").filter(|_| wide || tall) {
-=======
     // a soft speckle at a tenth of opacity on a dark desk does not need more. A clean desk has
     // no tile (the gradient alone).
     if let Some(part) = art::desk_tile_part()
         .and_then(art::part)
         .filter(|_| wide || tall)
     {
->>>>>>> feature/automation-patterns
         let px = TILE;
         let tex = part_texture(
             ui.ctx(),
@@ -89,10 +76,7 @@ pub fn paint(ui: &Ui, avail: Rect, view: &View) {
             Vec2::splat(px),
             Vec2::splat(TILE),
             TextureOptions::LINEAR_REPEAT,
-<<<<<<< HEAD
-=======
             crate::art::GrainTransform::None,
->>>>>>> feature/automation-patterns
         );
         if let Some(tex) = tex {
             let mut m = Mesh::with_texture(tex.id);
@@ -138,8 +122,6 @@ pub fn paint(ui: &Ui, avail: Rect, view: &View) {
     painter.rect_filled(unit, 0.0, SEAM);
 }
 
-<<<<<<< HEAD
-=======
 /// Rotates a color's hue by `degrees` (in place of a full image pass), preserving lightness and
 /// saturation so the desk stays dark.
 fn hue_rotate(c: Color32, degrees: f32) -> Color32 {
@@ -187,7 +169,6 @@ fn desaturate_scale(c: Color32, scale: f32) -> Color32 {
     Color32::from_rgb(l, l, l)
 }
 
->>>>>>> feature/automation-patterns
 /// The window's edges darkened: the mockup's radial gradient over the whole area (an ellipse
 /// of 0.75 of the area's width and height), as a grid of colored vertices.
 fn vignette(r: Rect) -> Mesh {
@@ -293,8 +274,6 @@ mod tests {
         let p = art::part("desk_tile").unwrap();
         assert_eq!((p.w, p.h, p.bleed), (TILE, TILE, 0.0));
     }
-<<<<<<< HEAD
-=======
 
     #[test]
     fn every_desk_texture_resolves_to_a_256_tile_or_none_for_clean() {
@@ -309,5 +288,4 @@ mod tests {
             }
         }
     }
->>>>>>> feature/automation-patterns
 }

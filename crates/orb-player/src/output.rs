@@ -19,7 +19,8 @@ use std::time::Instant;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
-    BufferSize, ErrorKind, FromSample, SampleFormat, SizedSample, StreamConfig, SupportedBufferSize,
+    BufferSize, DeviceId, ErrorKind, FromSample, HostId, SampleFormat, SizedSample, StreamConfig,
+    SupportedBufferSize,
 };
 use rubato::audioadapter_buffers::direct::InterleavedSlice;
 use rubato::{
@@ -46,6 +47,82 @@ impl std::error::Error for Error {}
 
 fn err(what: &str, e: impl std::fmt::Display) -> Error {
     Error(format!("{what}: {e}"))
+}
+
+/// How the output is opened ([`start_with`]). The engine always runs at 44.1 kHz and is resampled
+/// to the device's rate, so a requested `sample_rate` only changes the stream's rate, never the
+/// engine's.
+#[derive(Clone, Debug, Default)]
+pub struct OutputOptions {
+    /// The host (backend) name, lowercase, e.g. `"alsa"`, `"pipewire"`, `"pulseaudio"`; `None` is
+    /// the platform's default host. Only hosts compiled for this platform are recognized.
+    pub host: Option<String>,
+    /// A device id (`"host:device"`, see [`HostInfo`] / [`DeviceInfo`]); `None` is the host's
+    /// default output device.
+    pub device: Option<String>,
+    /// The stream's sample rate in Hz (`None`: 44.1 kHz when offered, else the device default).
+    pub sample_rate: Option<u32>,
+}
+
+/// An audio host (backend) available on this platform.
+#[derive(Clone, Debug)]
+pub struct HostInfo {
+    /// The lowercase id to persist in [`OutputOptions::host`] (`"alsa"`, `"wasapi"`, ...).
+    pub id: String,
+    /// The human-readable name (`"ALSA"`, `"WASAPI"`, ...).
+    pub name: String,
+}
+
+/// An output device of a host.
+#[derive(Clone, Debug)]
+pub struct DeviceInfo {
+    /// The id to persist in [`OutputOptions::device`] (`"host:device"`).
+    pub id: String,
+    /// The device's human-readable name.
+    pub name: String,
+}
+
+/// The hosts available on this platform (only those whose backend is actually reachable).
+pub fn available_hosts() -> Vec<HostInfo> {
+    cpal::available_hosts()
+        .into_iter()
+        .map(|h| HostInfo {
+            id: h.to_string(),
+            name: h.name().to_string(),
+        })
+        .collect()
+}
+
+/// The host named by `id` (lowercase), or the platform's default when `id` is `None`.
+fn host_of(id: Option<&str>) -> Result<cpal::Host, Error> {
+    match id {
+        Some(id) => {
+            let host_id: HostId = id.parse().map_err(|e| err("the audio host", e))?;
+            cpal::host_from_id(host_id).map_err(|e| err("the audio host", e))
+        }
+        None => Ok(cpal::default_host()),
+    }
+}
+
+/// The output devices of the host named by `id` (`None`: the default host), with their ids and
+/// names for the settings list.
+pub fn output_devices(host: Option<&str>) -> Result<Vec<DeviceInfo>, Error> {
+    let host = host_of(host)?;
+    let devices = host
+        .output_devices()
+        .map_err(|e| err("the output devices", e))?;
+    let mut out = Vec::new();
+    for device in devices {
+        let id = device.id().map(|i| i.to_string()).unwrap_or_default();
+        let name = device
+            .description()
+            .map(|d| d.to_string())
+            .unwrap_or_else(|_| id.clone());
+        if !id.is_empty() {
+            out.push(DeviceInfo { id, name });
+        }
+    }
+    Ok(out)
 }
 
 /// A running output stream; dropping it stops the sound.
@@ -568,16 +645,17 @@ impl CallbackSnapshot {
     }
 }
 
-/// The configuration to open: 44.1 kHz with two channels when offered (f32 preferred), else
-/// 44.1 kHz with any channel count, else the device's default (resampled). The third value is
-/// the device's buffer range for that configuration.
+/// The configuration to open: `rate` with two channels when offered (f32 preferred), else `rate`
+/// with any channel count, else the device's default (resampled). The third value is the device's
+/// buffer range for that configuration.
 fn choose(
     device: &cpal::Device,
+    rate: u32,
 ) -> Result<(StreamConfig, SampleFormat, SupportedBufferSize), Error> {
     let ranges: Vec<_> = device
         .supported_output_configs()
         .map_err(|e| err("the output configurations", e))?
-        .filter(|r| r.min_sample_rate() <= RATE && RATE <= r.max_sample_rate())
+        .filter(|r| r.min_sample_rate() <= rate && rate <= r.max_sample_rate())
         .collect();
     let score = |r: &cpal::SupportedStreamConfigRange| {
         (
@@ -587,7 +665,7 @@ fn choose(
         )
     };
     if let Some(r) = ranges.iter().max_by_key(|r| score(r)) {
-        let c = r.with_sample_rate(RATE);
+        let c = r.with_sample_rate(rate);
         return Ok((c.config(), c.sample_format(), *r.buffer_size()));
     }
     let c = device
@@ -656,17 +734,31 @@ fn build<T: SizedSample + FromSample<f32>>(
         .map_err(|e| err("the output stream", e))
 }
 
-/// Plays `audio` through the default output device.
+/// Plays `audio` through the default host and output device.
 pub fn start(audio: Audio) -> Result<Stream, Error> {
-    let host = cpal::default_host();
-    let device = host
-        .default_output_device()
-        .ok_or_else(|| Error("no default output device".into()))?;
+    start_with(audio, OutputOptions::default())
+}
+
+/// Plays `audio` through the host, device and rate of `options`.
+pub fn start_with(audio: Audio, options: OutputOptions) -> Result<Stream, Error> {
+    let host = host_of(options.host.as_deref())?;
+    let device = match options.device.as_deref() {
+        Some(id) => {
+            let device_id: DeviceId = id.parse().map_err(|e| err("the audio device", e))?;
+            host.device_by_id(&device_id)
+                .or_else(|| host.default_output_device())
+                .ok_or_else(|| Error("no output device".into()))?
+        }
+        None => host
+            .default_output_device()
+            .ok_or_else(|| Error("no default output device".into()))?,
+    };
     let name = device
         .description()
         .map(|d| d.to_string())
         .unwrap_or_else(|_| "?".into());
-    let (config, format, range) = choose(&device)?;
+    let rate = options.sample_rate.unwrap_or(RATE);
+    let (config, format, range) = choose(&device, rate)?;
     let requested = buffer_request(&range);
     let resampled = config.sample_rate != RATE;
     let health = Health::started();

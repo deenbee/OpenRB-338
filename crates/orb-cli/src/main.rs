@@ -94,6 +94,17 @@ enum Cmd {
         /// When the song's mod is not found, play with the built-in kit, as in render.
         #[arg(long)]
         standard_kit: bool,
+        /// The audio host (backend) to play on, e.g. `alsa`, `pipewire` or `pulseaudio`
+        /// (default: the platform's default host).
+        #[arg(long, value_name = "HOST")]
+        host: Option<String>,
+        /// The audio output device, as `host:device` (e.g. `alsa:hw:0,0`); default: the host's
+        /// default output device.
+        #[arg(long, value_name = "ID")]
+        device: Option<String>,
+        /// The output sample rate in Hz (default: 44100 when offered, else the device default).
+        #[arg(long, value_name = "HZ")]
+        sample_rate: Option<u32>,
     },
     /// Print a song's metadata, as File > Info of the UI shows it: the format and version, the
     /// window title, the more text, the web page, the copyright, the mod and where it resolves
@@ -295,6 +306,9 @@ fn main() -> ExitCode {
             mod_dir,
             mod_file,
             standard_kit,
+            host,
+            device,
+            sample_rate,
         } => play(
             &input,
             bar,
@@ -303,6 +317,11 @@ fn main() -> ExitCode {
                 mod_file,
                 mod_dir,
                 standard_kit,
+            },
+            orb_player::output::OutputOptions {
+                host,
+                device,
+                sample_rate,
             },
         ),
         Cmd::Info {
@@ -569,7 +588,13 @@ fn render(
 }
 
 /// `orb play`: the song in the real-time player (`orb-player`) on the default output device.
-fn play(input: &Path, bar: Option<u32>, seconds: Option<f64>, mods: ModOpts) -> Result<(), Fail> {
+fn play(
+    input: &Path,
+    bar: Option<u32>,
+    seconds: Option<f64>,
+    mods: ModOpts,
+    audio_options: orb_player::output::OutputOptions,
+) -> Result<(), Fail> {
     use orb_player::{Command, Player};
     if let Some(s) = seconds
         && (s.is_nan() || s <= 0.0)
@@ -601,8 +626,8 @@ fn play(input: &Path, bar: Option<u32>, seconds: Option<f64>, mods: ModOpts) -> 
             .map_err(queue)?;
     }
     player.send(Command::Play).map_err(queue)?;
-    let stream =
-        orb_player::output::start(audio).map_err(|e| fail(1, format!("audio output: {e}")))?;
+    let stream = orb_player::output::start_with(audio, audio_options)
+        .map_err(|e| fail(1, format!("audio output: {e}")))?;
     eprintln!(
         "orb: playing {label} on {} ({} Hz{}, {} channels, {}, {}); Ctrl+C stops",
         stream.device,

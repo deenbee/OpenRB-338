@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-//! The panel's SVG parts (`assets/ui`), embedded by `build.rs`, and the knob designs.
-
-include!(concat!(env!("OUT_DIR"), "/parts_gen.rs"));
-=======
 //! The panel's SVG parts (`assets/ui` and `assets/modern_ui`), embedded by `build.rs`, and the
 //! knob designs. The active variant (`classic` or `modern`) selects which set of parts is
 //! served by [`part()`] and [`all()`].
@@ -135,7 +130,6 @@ fn parts_table() -> &'static [PartRow] {
         UiVariant::Modern => PARTS_MODERN_UI,
     }
 }
->>>>>>> feature/automation-patterns
 
 /// A part: its URI for egui's loaders, its SVG bytes and its bleed: how far, in panel pixels,
 /// the art reaches beyond its control's rectangle on every side (shadows, halos, glows;
@@ -165,12 +159,6 @@ impl Part {
     }
 }
 
-<<<<<<< HEAD
-/// The part called `name` (`PARTS` is sorted by name).
-pub fn part(name: &str) -> Option<Part> {
-    let i = PARTS.binary_search_by(|p| p.0.cmp(name)).ok()?;
-    Some(Part::from_row(&PARTS[i]))
-=======
 /// Maps a layout part name to its file name in `assets/modern_ui`, when the two
 /// differ. Returns `None` when the name is unchanged (lookup `name` as-is).
 fn modern_part_name(name: &str) -> Option<&str> {
@@ -215,7 +203,6 @@ fn part_for(name: &str, variant: UiVariant) -> Option<Part> {
         return Some(Part::from_row(&PARTS_UI[i]));
     }
     None
->>>>>>> feature/automation-patterns
 }
 
 /// The part names asked for that no art has, in this process.
@@ -234,15 +221,9 @@ pub fn missing() -> Vec<String> {
     m.iter().cloned().collect()
 }
 
-<<<<<<< HEAD
-/// Every part.
-pub fn all() -> impl Iterator<Item = Part> {
-    PARTS.iter().map(Part::from_row)
-=======
 /// Every part of the active variant.
 pub fn all() -> impl Iterator<Item = Part> {
     parts_table().iter().map(Part::from_row)
->>>>>>> feature/automation-patterns
 }
 
 /// A knob design: the layers are `<name>_body` (static) and `<name>_pointer`, rotated about
@@ -255,8 +236,6 @@ pub struct KnobDesign {
     pub cy: f32,
 }
 
-<<<<<<< HEAD
-=======
 const MODERN_KNOB_22: KnobDesign = KnobDesign {
     name: "knob_22",
     w: 22.0,
@@ -265,7 +244,6 @@ const MODERN_KNOB_22: KnobDesign = KnobDesign {
     cy: 11.0,
 };
 
->>>>>>> feature/automation-patterns
 pub const KNOBS: [KnobDesign; 5] = [
     KnobDesign {
         name: "knob_303",
@@ -295,10 +273,7 @@ pub const KNOBS: [KnobDesign; 5] = [
         cx: 6.0,
         cy: 6.0,
     },
-<<<<<<< HEAD
-=======
     // The gray sections' knobs: shuffle, the mixer's pan and delay send, the effects'.
->>>>>>> feature/automation-patterns
     KnobDesign {
         name: "knob_gray",
         w: 18.0,
@@ -310,12 +285,9 @@ pub const KNOBS: [KnobDesign; 5] = [
 
 /// The design of a knob control, by its layout part name.
 pub fn knob_design(part: &str) -> &'static KnobDesign {
-<<<<<<< HEAD
-=======
     if part == "knob_22" {
         return &MODERN_KNOB_22;
     }
->>>>>>> feature/automation-patterns
     KNOBS
         .iter()
         .find(|k| k.name == part)
@@ -359,36 +331,13 @@ mod tests {
         assert_eq!(KNOBS.len(), orb_ui_art::parts::KNOBS.len());
         for (a, b) in KNOBS.iter().zip(orb_ui_art::parts::KNOBS.iter()) {
             assert_eq!(a.name, b.name);
-<<<<<<< HEAD
-            assert_eq!((a.w, a.h, a.cx, a.cy), (b.w, b.h, b.cx, b.cy));
-=======
             assert_eq!((a.w, a.h, a.cx, a.cy), (b.w, b.h, b.cx, a.cy));
->>>>>>> feature/automation-patterns
             // the pointer turns about the canvas's center: the art centers the knob
             assert_eq!((a.cx * 2.0, a.cy * 2.0), (a.w, a.h), "{}", a.name);
         }
     }
 
     #[test]
-<<<<<<< HEAD
-    fn all_generated_parts_are_embedded_and_sorted() {
-        let generated = orb_ui_art::parts::all_parts();
-        assert_eq!(PARTS.len(), generated.len());
-        assert!(PARTS.windows(2).all(|w| w[0].0 < w[1].0));
-        assert!(part("btn_play_lit").is_some());
-        assert!(part("panel").is_none());
-        assert!(part("nope").is_none());
-        // the bleed read from each file is the generator's
-        for g in generated {
-            let p = part(&g.name).unwrap();
-            assert_eq!(p.bleed, g.bleed, "{}", g.name);
-            assert!(
-                (p.w - g.w).abs() < 1e-4 && (p.h - g.h).abs() < 1e-4,
-                "{}",
-                g.name
-            );
-        }
-=======
     fn modern_knob_22_design_matches_its_art() {
         let knob = knob_design("knob_22");
         assert_eq!(knob.name, "knob_22");
@@ -431,6 +380,5 @@ mod tests {
             part_for("mod_view_glass", UiVariant::Modern).unwrap().name,
             "mod_view_glass"
         );
->>>>>>> feature/automation-patterns
     }
 }

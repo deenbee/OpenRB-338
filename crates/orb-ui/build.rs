@@ -156,8 +156,6 @@ fn embed_windows_resources(manifest: &Path, version: &str) {
         .unwrap();
 }
 
-<<<<<<< HEAD
-=======
 /// Generates `parts_gen_<variant>.rs` with `PARTS_<VARIANT_UPPER>` from the SVG files in
 /// `assets/<variant>`. Always emits a valid (possibly empty) static table.
 fn generate_parts(manifest: &Path, variant: &str) -> String {
@@ -208,65 +206,14 @@ fn generate_parts(manifest: &Path, variant: &str) -> String {
     out
 }
 
->>>>>>> feature/automation-patterns
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let version = set_version(&manifest);
     embed_windows_resources(&manifest, &version);
-<<<<<<< HEAD
-    let dir = manifest.join("../../assets/ui").canonicalize().unwrap();
-    println!("cargo:rerun-if-changed={}", dir.display());
-    let mut names: Vec<String> = fs::read_dir(&dir)
-        .unwrap()
-        .filter_map(|e| {
-            let name = e.unwrap().file_name().into_string().unwrap();
-            let stem = name.strip_suffix(".svg")?;
-            (stem != "panel").then(|| stem.to_string())
-        })
-        .collect();
-    names.sort();
-    // (name, uri, bytes, bleed, w, h): the control's rectangle w x h and the bleed, how far
-    // the art reaches beyond it, read from the viewBox (`-bleed -bleed w+2bleed h+2bleed`,
-    // assets/ui/README.md, task-179)
-    let mut out = String::from(concat!(
-        "/// A part's row: name, URI, SVG bytes, bleed, width, height.\n",
-        "pub type PartRow = (&'static str, &'static str, &'static [u8], f32, f32, f32);\n",
-        "pub static PARTS: &[PartRow] = &[\n"
-    ));
-    for n in &names {
-        let path = dir.join(format!("{n}.svg"));
-        let svg = fs::read_to_string(&path).unwrap();
-        let vb: Vec<f32> = svg
-            .split("viewBox=\"")
-            .nth(1)
-            .and_then(|s| s.split('"').next())
-            .unwrap_or_else(|| panic!("{n}.svg has no viewBox"))
-            .split(' ')
-            .map(|v| v.parse().unwrap())
-            .collect();
-        let b = -vb[0];
-        writeln!(
-            out,
-            "    ({n:?}, \"bytes://orb-ui/{n}.svg\", include_bytes!({:?}), {:?}, {:?}, {:?}),",
-            path.display().to_string(),
-            b,
-            vb[2] - 2.0 * b,
-            vb[3] - 2.0 * b
-        )
-        .unwrap();
-    }
-    out.push_str("];\n");
-    fs::write(
-        PathBuf::from(env::var("OUT_DIR").unwrap()).join("parts_gen.rs"),
-        out,
-    )
-    .unwrap();
-=======
     // Embed every SVG part of each UI variant (except the composed demo panel.svg).
     let classic = generate_parts(&manifest, "ui");
     let modern = generate_parts(&manifest, "modern_ui");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     fs::write(out_dir.join("parts_gen_classic.rs"), classic).unwrap();
     fs::write(out_dir.join("parts_gen_modern.rs"), modern).unwrap();
->>>>>>> feature/automation-patterns
 }

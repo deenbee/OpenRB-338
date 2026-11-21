@@ -117,7 +117,12 @@ ReBirth" drum samples), embedded in both binaries, may ship in the public releas
 the `.tar.gz`, the `.zip`, the `.dmg`, and the later installer and AppImages.
 
 On Linux, both `orb` and OpenRB-338 link `libasound.so.2` (ALSA, package `libasound2`), so even
-`orb --help` fails without it. Crackling with `A buffer underrun or overrun occurred` many times a
+`orb --help` fails without it. A build with the default `native-audio` feature also links
+`libpipewire-0.3.so.0` and `libpulse.so.0` for the native PipeWire and PulseAudio output hosts
+(Options > Audio Output lists them), so it needs them to start as well; the releases build with
+`--no-default-features` (the snap, the `.tar.gz` and the AppImage are ALSA-only, routing to
+PulseAudio/PipeWire through the ALSA plugins), so they need neither. Crackling with
+`A buffer underrun or overrun occurred` many times a
 second (issue #7, pipewire-alsa) means the device buffer is too small for the sound server's
 cycle; the output asks for 2048 frames (`BUFFER_FRAMES`, crates/orb-player/src/output.rs). Report
 the two lines `orb play SONG.rbs --seconds 10` prints (the start line with `buffer ... requested,
@@ -336,7 +341,11 @@ Actions are pinned to a commit SHA (the version in a comment). No workflow uses 
     tests; AGENTS.md) skip when those are absent (checked locally with all of them unset). The
     synthetic recrypt tests (`crates/rbm/tests/recrypt_python.rs`, which run `tools/rbm.py`)
     need none of them.
-    Linux installs `libasound2-dev` first.
+    Linux installs `libasound2-dev` first, plus the client libraries of the native cpal backends
+    the tests build with by default: `libpipewire-0.3-dev` and `libpulse-dev` (ALSA is always
+    compiled in; PipeWire and PulseAudio are optional hosts in Options > Audio Output). The
+    release jobs do not need them: `scripts/build.sh` builds Linux with `--no-default-features`
+    (ALSA-only, like the snap).
 - `release.yml`, on a tag `v*` and by hand:
   - `prepare` computes one `SOURCE_DATE_EPOCH` and one `ORB_BUILD_BRANCH` (`scripts/release-env.sh`)
     so all packages agree. On a tag the build time is the tag's and a tag that is not
@@ -735,6 +744,12 @@ or `libdl`, and its container does not install the three libraries (it fails whe
   programs use is `GLIBC_2.35`, see "What may ship"; both architectures);
 - `libasound.so.2` (`libasound2` on Debian and Ubuntu, `alsa-lib` on Fedora and Arch): without
   it even `orb --help` fails; a PipeWire or PulseAudio system has the ALSA plugins for it;
+- `libpipewire-0.3.so.0` (`libpipewire-0.3-0` / `libpipewire-0.3-0t64` on Debian and Ubuntu) and
+  `libpulse.so.0` (`libpulse0`): a build with the default `native-audio` feature links these for
+  the native PipeWire and PulseAudio hosts that Options > Audio Output lists, so it needs them
+  to start (every desktop audio system has one of them). The releases (the snap, the `.tar.gz`
+  and the AppImage) build with `--no-default-features` (ALSA only, no native hosts) and so need
+  neither.
 - for the window: X11 (`libxcursor1`, `libxrandr2`, `libxi6`; the X11 libraries are loaded at
   run time; the keyboard libraries are bundled) or Wayland (`libwayland-client0`), and
   a graphics driver, Vulkan or OpenGL, either one. The window is drawn by wgpu, whose backends

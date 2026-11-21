@@ -235,6 +235,13 @@ fn main() -> eframe::Result {
     // keeps the audio stream alive for the whole run
     let mut _stream = None;
     let mut audio_health = None;
+    // The audio settings are read before the stream starts; a change applies on the next launch.
+    let settings = Settings::load();
+    let audio_options = orb_player::output::OutputOptions {
+        host: settings.audio_host.clone(),
+        device: settings.audio_device.clone(),
+        sample_rate: settings.audio_sample_rate,
+    };
     if !demo {
         let samples = Some(rbm::standard::builtin_samples());
         app_samples = samples.clone();
@@ -250,7 +257,7 @@ fn main() -> eframe::Result {
                 }
             }
         }
-        match orb_player::output::start(audio) {
+        match orb_player::output::start_with(audio, audio_options) {
             Ok(s) => {
                 eprintln!(
                     "OpenRB-338: audio on {} ({} Hz{}, {} channels, {}, {})",
@@ -272,7 +279,7 @@ fn main() -> eframe::Result {
                 eprintln!("OpenRB-338: audio output: {e}; the panel runs without sound");
                 // the one failure at the launch is an error the user expects to hear of: the
                 // box. Later audio errors repeat: `App::notify`.
-                start_errors.push(format!("Audio output: {e}; the panel runs without sound"));
+                start_errors.push(audio_error_text(&e));
             }
         }
         link = Some(l);
@@ -331,7 +338,7 @@ fn main() -> eframe::Result {
             app.audio_health = audio_health;
             app.menu = true;
             app.enable_logo_anim();
-            app.settings = Settings::load();
+            app.settings = settings;
             // the song (or the new empty song) and its mod's startup sound; nothing in the demo,
             // which has no player
             // (the errors of the start are one box)
@@ -362,6 +369,21 @@ fn main() -> eframe::Result {
         std::process::exit(1);
     }
     result
+}
+
+/// What the user is told when the audio output fails to open: the error, and on Linux a hint to
+/// change the audio configuration (the backend/device/sample rate live in Options > Audio Output,
+/// and the server may not be running).
+fn audio_error_text(e: &dyn std::fmt::Display) -> String {
+    let mut text = format!("Audio output: {e}; the panel runs without sound");
+    if cfg!(target_os = "linux") {
+        text.push_str(concat!(
+            "\n\nLinux: no sound was opened. Check Options > Audio Output (host, device and ",
+            "sample rate; a change applies after restart), and that ALSA, PipeWire or PulseAudio ",
+            "is running on the system."
+        ));
+    }
+    text
 }
 
 /// What the user is told when the window cannot be made: eframe's error, and for a wgpu

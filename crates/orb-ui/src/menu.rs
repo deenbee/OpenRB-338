@@ -66,11 +66,7 @@ pub enum Answer {
 }
 
 /// A menu command.
-<<<<<<< HEAD
-#[derive(Clone, Debug, PartialEq, Eq)]
-=======
 #[derive(Clone, Debug, PartialEq)]
->>>>>>> feature/automation-patterns
 pub enum Cmd {
     New,
     Open,
@@ -81,11 +77,10 @@ pub enum Cmd {
     Info,
     /// Help > Keyboard Shortcuts.
     KeyHelp,
-<<<<<<< HEAD
-=======
     /// Edit > All Automation: opens the scrollable song-automation overview.
     AllAutomation,
->>>>>>> feature/automation-patterns
+    /// Edit > All Patterns: opens the read-only overview of the four pattern sections.
+    AllPatterns,
     /// Help > About.
     About,
     /// "Choose file..." of the Mods menu: the browser for a mod.
@@ -104,9 +99,6 @@ pub enum Cmd {
     ToggleVintage,
     /// "Play Mod Startup Sound" of the Options menu (the original's Edit > Preferences).
     ToggleStartupSound,
-<<<<<<< HEAD
-    SetKeyMode(KeyMode),
-=======
     /// Switch between the classic and modern UI variants (Options menu).
     ToggleUiVariant,
     /// Set the classic skin's grainy panel tone (Options menu).
@@ -115,11 +107,16 @@ pub enum Cmd {
     SetGrainHue(f32),
     /// Set the desk (around the panel) texture pattern (Options menu).
     SetDeskTexture(crate::settings::DeskTexture),
+    /// Set the audio output host (`None`: the default host; Options menu).
+    SetAudioHost(Option<String>),
+    /// Set the audio output device (`None`: the default device; Options menu).
+    SetAudioDevice(Option<String>),
+    /// Set the audio output sample rate (`None`: default; Options menu).
+    SetAudioSampleRate(Option<u32>),
     SetKeyMode(KeyMode),
     CopyPatternMode,
     CopySongMode(crate::clipboard::CopyFilter, bool),
     Paste,
->>>>>>> feature/automation-patterns
 }
 
 /// One entry of the Mods menu: a mod of the Mods folder, or the several mods that share an
@@ -929,10 +926,8 @@ impl App {
             }
             Cmd::Info => self.show_info(),
             Cmd::KeyHelp => self.show_key_help(),
-<<<<<<< HEAD
-=======
             Cmd::AllAutomation => self.open_all_automation(),
->>>>>>> feature/automation-patterns
+            Cmd::AllPatterns => self.open_patterns_overview(),
             Cmd::About => self.show_about(),
             Cmd::ChooseModFile => self.open_browser(Mode::ChooseMod),
             Cmd::UseKit(kit) => self.use_kit(kit),
@@ -950,9 +945,6 @@ impl App {
                     self.fail(e);
                 }
             }
-<<<<<<< HEAD
-            Cmd::SetKeyMode(m) => self.key_mode = m,
-=======
             Cmd::ToggleUiVariant => {
                 let next = match self.settings.ui_variant {
                     crate::settings::UiVariant::Classic => crate::settings::UiVariant::Modern,
@@ -987,12 +979,38 @@ impl App {
                     self.fail(e);
                 }
             }
+            Cmd::SetAudioHost(host) => {
+                self.settings.audio_host = host;
+                self.audio_changed();
+                if let Err(e) = self.settings.save() {
+                    self.fail(e);
+                }
+            }
+            Cmd::SetAudioDevice(device) => {
+                self.settings.audio_device = device;
+                self.audio_changed();
+                if let Err(e) = self.settings.save() {
+                    self.fail(e);
+                }
+            }
+            Cmd::SetAudioSampleRate(rate) => {
+                self.settings.audio_sample_rate = rate;
+                self.audio_changed();
+                if let Err(e) = self.settings.save() {
+                    self.fail(e);
+                }
+            }
             Cmd::SetKeyMode(m) => self.key_mode = m,
             Cmd::CopyPatternMode => self.copy_pattern_mode(),
             Cmd::CopySongMode(filter, loop_range) => self.copy_song_mode(filter, loop_range),
             Cmd::Paste => self.paste(),
->>>>>>> feature/automation-patterns
         }
+    }
+
+    /// Tells the user (on the status line) that an audio output change needs a restart: the
+    /// stream is opened once at launch, so the new host, device or rate applies on the next run.
+    fn audio_changed(&mut self) {
+        self.status = Some("Audio output changed; restart OpenRB-338 to apply it.".to_string());
     }
 
     /// What a browser chose, by its mode (not an open: `open_song`).
@@ -1203,8 +1221,6 @@ impl App {
                                 ui.close();
                             }
                         });
-<<<<<<< HEAD
-=======
                         ui.menu_button("Edit", |ui| {
                             let song_mode = self.panel.transport.song_mode;
                             let focus = self.panel.focus;
@@ -1328,8 +1344,17 @@ impl App {
                                 cmd = Some(Cmd::AllAutomation);
                                 ui.close();
                             }
+                            let r = ui.add_enabled(song_mode, egui::Button::new("All Patterns..."));
+                            let r = if song_mode {
+                                r
+                            } else {
+                                r.on_disabled_hover_text("Pattern overview needs song mode.")
+                            };
+                            if r.clicked() {
+                                cmd = Some(Cmd::AllPatterns);
+                                ui.close();
+                            }
                         });
->>>>>>> feature/automation-patterns
                         ui.menu_button("Mods", |ui| {
                             let (std_on, checked) = match &self.mod_list {
                                 Some(Ok(l)) => self.mod_checks(l),
@@ -1418,8 +1443,6 @@ impl App {
                                 cmd = Some(Cmd::ToggleStartupSound);
                                 ui.close();
                             }
-<<<<<<< HEAD
-=======
                             let variant = self.settings.ui_variant;
                             let label = format!("UI Variant: {}", variant);
                             if ui.selectable_label(false, &label).clicked() {
@@ -1450,20 +1473,112 @@ impl App {
                                         }
                                     }
                                 });
-                                ui.menu_button("Desk Texture", |ui| {
-                                    for texture in crate::settings::DeskTexture::ALL {
-                                        let selected = self.settings.desk_texture == texture;
-                                        if ui
-                                            .selectable_label(selected, texture.to_string())
-                                            .clicked()
-                                        {
-                                            cmd = Some(Cmd::SetDeskTexture(texture));
+                            });
+                            // The desk around the panel and the audio output are the same for
+                            // both skins, so they stay enabled with the modern variant too.
+                            ui.menu_button("Desk Texture", |ui| {
+                                for texture in crate::settings::DeskTexture::ALL {
+                                    let selected = self.settings.desk_texture == texture;
+                                    if ui.selectable_label(selected, texture.to_string()).clicked()
+                                    {
+                                        cmd = Some(Cmd::SetDeskTexture(texture));
+                                        ui.close();
+                                    }
+                                }
+                            });
+                            let host_label =
+                                self.settings.audio_host.as_deref().unwrap_or("Default");
+                            let device_label =
+                                self.settings.audio_device.as_deref().unwrap_or("Default");
+                            let rate_label = self
+                                .settings
+                                .audio_sample_rate
+                                .map_or("Default".to_string(), |r| format!("{r} Hz"));
+                            ui.menu_button("Audio Output", |ui| {
+                                ui.menu_button(format!("Host: {host_label}"), |ui| {
+                                    if ui
+                                        .selectable_label(
+                                            self.settings.audio_host.is_none(),
+                                            "Default",
+                                        )
+                                        .clicked()
+                                    {
+                                        cmd = Some(Cmd::SetAudioHost(None));
+                                        ui.close();
+                                    }
+                                    for host in orb_player::output::available_hosts() {
+                                        let selected = self.settings.audio_host.as_deref()
+                                            == Some(host.id.as_str());
+                                        if ui.selectable_label(selected, &host.name).clicked() {
+                                            cmd = Some(Cmd::SetAudioHost(Some(host.id)));
                                             ui.close();
                                         }
                                     }
                                 });
+                                ui.menu_button(format!("Device: {device_label}"), |ui| {
+                                    if ui
+                                        .selectable_label(
+                                            self.settings.audio_device.is_none(),
+                                            "Default",
+                                        )
+                                        .clicked()
+                                    {
+                                        cmd = Some(Cmd::SetAudioDevice(None));
+                                        ui.close();
+                                    }
+                                    match orb_player::output::output_devices(
+                                        self.settings.audio_host.as_deref(),
+                                    ) {
+                                        Ok(devices) => {
+                                            for device in devices {
+                                                let selected =
+                                                    self.settings.audio_device.as_deref()
+                                                        == Some(device.id.as_str());
+                                                if ui
+                                                    .selectable_label(selected, &device.name)
+                                                    .clicked()
+                                                {
+                                                    cmd =
+                                                        Some(Cmd::SetAudioDevice(Some(device.id)));
+                                                    ui.close();
+                                                }
+                                            }
+                                        }
+                                        Err(_) => {
+                                            ui.label(
+                                                RichText::new("no output devices").color(INK_DIM),
+                                            );
+                                        }
+                                    }
+                                });
+                                ui.menu_button(format!("Sample rate: {rate_label}"), |ui| {
+                                    if ui
+                                        .selectable_label(
+                                            self.settings.audio_sample_rate.is_none(),
+                                            "Default",
+                                        )
+                                        .clicked()
+                                    {
+                                        cmd = Some(Cmd::SetAudioSampleRate(None));
+                                        ui.close();
+                                    }
+                                    for rate in [44_100, 48_000, 88_200, 96_000, 176_400, 192_000] {
+                                        let selected =
+                                            self.settings.audio_sample_rate == Some(rate);
+                                        if ui
+                                            .selectable_label(selected, format!("{rate} Hz"))
+                                            .clicked()
+                                        {
+                                            cmd = Some(Cmd::SetAudioSampleRate(Some(rate)));
+                                            ui.close();
+                                        }
+                                    }
+                                });
+                                ui.separator();
+                                ui.label(
+                                    RichText::new("Changes apply after restart").color(INK_DIM),
+                                );
                             });
->>>>>>> feature/automation-patterns
                             ui.separator();
                             let ctx = ui.ctx().clone();
                             let synth = format!(

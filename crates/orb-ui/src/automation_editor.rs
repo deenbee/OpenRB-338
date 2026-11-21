@@ -283,6 +283,10 @@ impl App {
 
     /// Renders one vertically scrollable overview of the active automation lanes.
     pub fn all_automation_ui(&mut self, ctx: &egui::Context) {
+        if !self.panel.transport.song_mode {
+            self.all_auto_editor = None;
+            return;
+        }
         let Some(mut editor) = self.all_auto_editor.clone() else {
             return;
         };
@@ -336,7 +340,9 @@ impl App {
                             .suffix(" bars"),
                     );
                     ui.separator();
-                    ui.label(RichText::new(format!("Bars {start_bar_1}–{end_bar_1}")).color(AMBER));
+                    ui.label(
+                        RichText::new(format!("Bars {start_bar_1}–{end_bar_1}")).color(AMBER),
+                    );
                     ui.separator();
                     ui.label(RichText::new(format!("{} active lanes", lanes.len())).color(INK_DIM));
                 });
@@ -423,10 +429,8 @@ impl App {
                         {
                             editor.scroll_bar = (bar_1 - 1).clamp(0, max_start_bar);
                         }
-                        if ui
-                            .add_enabled(editor.scroll_bar < max_start_bar, egui::Button::new("▶"))
-                            .clicked()
-                        {
+                        let right_btn = egui::Button::new("▶");
+                        if ui.add_enabled(editor.scroll_bar < max_start_bar, right_btn).clicked() {
                             editor.scroll_bar = (editor.scroll_bar + 1).min(max_start_bar);
                         }
                     });
@@ -490,9 +494,8 @@ impl App {
             });
         }
         for (row, patterns) in self.panel.pattern_automation.iter().enumerate() {
-            if patterns.is_empty() {
-                continue;
-            }
+            let mut patterns = patterns.clone();
+            patterns.entry(1).or_insert(1);
             let events = patterns
                 .iter()
                 .map(|(&bar, &pattern)| TrackEvent {
@@ -773,11 +776,19 @@ impl App {
         let curve_color = Color32::from_rgb(0x38, 0xd0, 0x70);
         let node_color = Color32::from_rgb(0x56, 0xff, 0x9e);
 
+        let prev_val = loaded.as_ref().and_then(|all| {
+            all[track_idx]
+                .iter()
+                .filter(|e| e.ctrl == editor.ctrl && e.tick <= tick_start)
+                .max_by_key(|e| e.tick)
+                .map(|e| e.value)
+        });
+
         // Draw curve lines
         if !events.is_empty() {
-            let mut pts: Vec<Pos2> = Vec::with_capacity(events.len() + 2);
-            let first = events[0];
-            pts.push(Pos2::new(plot_rect.min.x, val_to_y(first.value)));
+            let mut pts: Vec<Pos2> = Vec::with_capacity(events.len() + 3);
+            let start_val = prev_val.unwrap_or(events[0].value);
+            pts.push(Pos2::new(plot_rect.min.x, val_to_y(start_val)));
             for e in &events {
                 let p = Pos2::new(tick_to_x(e.tick), val_to_y(e.value));
                 if editor.is_binary
@@ -793,6 +804,12 @@ impl App {
             for w in pts.windows(2) {
                 painter.line_segment([w[0], w[1]], Stroke::new(2.0, curve_color));
             }
+        } else if let Some(val) = prev_val {
+            let y = val_to_y(val);
+            painter.line_segment(
+                [Pos2::new(plot_rect.min.x, y), Pos2::new(plot_rect.max.x, y)],
+                Stroke::new(1.5, curve_color.gamma_multiply(0.4)),
+            );
         }
 
         // Draw point handles and check hit

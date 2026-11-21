@@ -234,8 +234,6 @@ pub enum Command {
     /// Top-level msg 57's clear of the preview player (`sub_1001DB60`, 0x1001DBA4: whatever
     /// mod it frees).
     PreviewStop,
-<<<<<<< HEAD
-=======
     /// Deletes track events in tick range `[tick_start, tick_end)` for track `track`.
     DeleteEvents {
         track: usize,
@@ -248,7 +246,6 @@ pub enum Command {
         track: usize,
         events: Box<[orb_engine::song::TrackEvent]>,
     },
->>>>>>> feature/automation-patterns
 }
 
 /// A sample for the preview player ([`Command::Preview`]).
@@ -302,10 +299,7 @@ impl ModSwap {
 pub enum Garbage {
     Engine(Box<Engine>),
     Bytes(Box<[u8]>),
-<<<<<<< HEAD
-=======
     TrackEvents(Box<[orb_engine::song::TrackEvent]>),
->>>>>>> feature/automation-patterns
     Mod(Box<ModSwap>),
     Preview(Box<Preview>),
 }
@@ -769,8 +763,6 @@ impl Audio {
                 self.preview_on = true;
             }
             Command::PreviewStop => self.preview_on = false,
-<<<<<<< HEAD
-=======
             Command::DeleteEvents {
                 track,
                 tick_start,
@@ -784,7 +776,6 @@ impl Audio {
                 self.target().add_events(track, &events);
                 self.throw(Garbage::TrackEvents(events));
             }
->>>>>>> feature/automation-patterns
         }
     }
 
